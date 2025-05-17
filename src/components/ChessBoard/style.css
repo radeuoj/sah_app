@@ -1,0 +1,31 @@
+.chess_board {
+    width: min(80vh, 100vw);
+    height: min(80vh, 100vw);
+
+    background-color: lightblue;
+    
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
+}
+
+.target_square {
+    width: 12.5%;
+    height: 12.5%;
+    border-color: #777777;
+    border-width: 5px;
+    border-style: solid;
+    position: absolute;
+    pointer-events: none;
+}
+
+/* .chess_square {
+}
+
+.chess_square_black {
+    background-color: #642e88;
+}
+
+.chess_square_white {
+    background-color: #f2dfff;
+} */
