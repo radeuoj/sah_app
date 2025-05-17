@@ -1,13 +1,13 @@
 import { ChessPieces } from "../ChessPiece";
 import Image from "next/image";
-import { Position } from "../Position";
+import { Vector2 } from "../Vector";
 
 export enum ChessSquareColor {
     BLACK,
     WHITE,
 }
 
-export default function ChessSquare({ color, position, setCurrentPos }: { color: ChessSquareColor, position: Position, setCurrentPos: (pos: Position) => void }) {
+export default function ChessSquare({ color, position, setCurrentPos }: { color: ChessSquareColor, position: Vector2, setCurrentPos: (pos: Vector2) => void }) {
     return (
         <div style={{
             backgroundColor: color == ChessSquareColor.BLACK ? "#8A2D3B" : "#FBDB93",

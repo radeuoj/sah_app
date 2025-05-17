@@ -2,16 +2,128 @@
 
 import "./style.css";
 import ChessSquare, { ChessSquareColor } from "../ChessSquare";
-import ChessPiece, { ChessPieces } from "../ChessPiece";
+import ChessPiece, { ChessPieceColors, ChessPieces, ChessPieceData } from "../ChessPiece";
 import React, { ReactNode, useRef } from "react";
-import { Position } from "../Position";
+import { Vector2 } from "../Vector";
 
 export default function ChessBoard() {
     // const [pos, setPos] = React.useState<Position>({ x: 0, y: 0 });
-    const pos = useRef<Position>({ x: 0, y: 0 });
+    const pos = useRef<Vector2>({ x: 0, y: 0 });
     const ref = useRef<HTMLDivElement | null>(null);
     const targetSquare = useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
+
+    function getStartingPosition(): ChessPieceData[] {
+        const result: ChessPieceData[] = [];
+
+        // KINGS
+        result.push({
+            piece: ChessPieces.KING,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.KING} color={ChessPieceColors.WHITE} key="wk" startPos={{ x: 4, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.KING,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.KING} color={ChessPieceColors.BLACK} key="bk" startPos={{ x: 4, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        });
+
+        // QUEENS
+        result.push({
+            piece: ChessPieces.QUEEN,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.QUEEN} color={ChessPieceColors.WHITE} key="wq" startPos={{ x: 3, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.QUEEN,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.QUEEN} color={ChessPieceColors.BLACK} key="bq" startPos={{ x: 3, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        });
+
+        // BISHOPS
+        result.push({
+            piece: ChessPieces.BISHOP,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.WHITE} key="wb1" startPos={{ x: 2, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.BISHOP,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.WHITE} key="wb2" startPos={{ x: 5, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.BISHOP,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.BLACK} key="bb1" startPos={{ x: 2, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.BISHOP,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.BLACK} key="bb2" startPos={{ x: 5, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        });
+
+        // KNIGHTS
+        result.push({
+            piece: ChessPieces.KNIGHT,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.WHITE} key="wn1" startPos={{ x: 1, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.KNIGHT,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.WHITE} key="wn2" startPos={{ x: 6, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.KNIGHT,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.BLACK} key="bn1" startPos={{ x: 1, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.KNIGHT,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.BLACK} key="bn2" startPos={{ x: 6, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        });
+
+        // ROOKS
+        result.push({
+            piece: ChessPieces.ROOK,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.WHITE} key="wr1" startPos={{ x: 0, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.ROOK,
+            color: ChessPieceColors.WHITE,
+            elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.WHITE} key="wr2" startPos={{ x: 7, y: 7 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.ROOK,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.BLACK} key="br1" startPos={{ x: 0, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        },
+        {
+            piece: ChessPieces.ROOK,
+            color: ChessPieceColors.BLACK,
+            elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.BLACK} key="br2" startPos={{ x: 7, y: 0 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+        });
+
+        // PAWNS
+        for (let i = 0; i < 8; i++)  {
+            result.push({
+                piece: ChessPieces.PAWN,
+                color: ChessPieceColors.WHITE,
+                elem: <ChessPiece piece={ChessPieces.PAWN} color={ChessPieceColors.WHITE} key={`wp${i + 1}`} startPos={{ x: i, y: 6 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+            },
+            {
+                piece: ChessPieces.PAWN,
+                color: ChessPieceColors.BLACK,
+                elem: <ChessPiece piece={ChessPieces.PAWN} color={ChessPieceColors.BLACK} key={`bp${i + 1}`} startPos={{ x: i, y: 1 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} />,
+            });
+        }
+
+        return result;
+    }
+
+    const game = useRef<ChessPieceData[]>(getStartingPosition());
     
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = true;
@@ -91,7 +203,7 @@ export default function ChessBoard() {
                 for (let i = 1; i <= 8; i++) {
                     for (let j = 1; j <= 8; j++) {
                         let color = i % 2 == j % 2 ? ChessSquareColor.WHITE : ChessSquareColor.BLACK;
-                        squares.push(<ChessSquare color={color} key={i * 10 + j} position={{ x: j, y: i }} setCurrentPos={(pos_: Position) => {
+                        squares.push(<ChessSquare color={color} key={i * 10 + j} position={{ x: j, y: i }} setCurrentPos={(pos_: Vector2) => {
                             pos.current = pos_;
                         }} />);
                     }
@@ -106,13 +218,19 @@ export default function ChessBoard() {
                 }} />;
             })()}
 
-            <ChessPiece piece={ChessPieces.PAWN} startPos={{ x: 1, y: 1 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => {
+            {/* <ChessPiece piece={ChessPieces.PAWN} color={ChessPieceColors.BLACK} startPos={{ x: 1, y: 1 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => {
                 return ref.current?.getBoundingClientRect() as DOMRect;
             }} />
 
-            <ChessPiece piece={ChessPieces.PAWN} startPos={{ x: 2, y: 1 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => {
-                return ref.current?.getBoundingClientRect() as DOMRect;
-            }} />
+            <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.WHITE} startPos={{ x: 2, y: 1 }} getCurrentPos={() => pos.current} getBoundingClientRect={() => ref.current?.getBoundingClientRect() as DOMRect} /> */}
+
+            {/* {Object.keys(game.current).map((v, i) => {
+                return game.current[v].elem;
+            })} */}
+
+            {Object.values(game.current).map(v => {
+                return v.elem;
+            })}
         </div>
     );
 }

@@ -1,11 +1,27 @@
 import React from "react";
-import { Position } from "../Position";
+import { Vector2 } from "../Vector";
 
 export enum ChessPieces {
     PAWN,
+    ROOK,
+    KNIGHT,
+    BISHOP,
+    KING,
+    QUEEN,
 }
 
-export default function ChessPiece({ piece, startPos, getCurrentPos, getBoundingClientRect }: { piece: ChessPieces, startPos: Position, getCurrentPos: () => Position, getBoundingClientRect: () => DOMRect }) {
+export enum ChessPieceColors {
+    BLACK,
+    WHITE,
+}
+
+export interface ChessPieceData {
+    piece: ChessPieces,
+    color: ChessPieceColors,
+    elem: React.JSX.Element,
+}
+
+export default function ChessPiece({ piece, color, startPos, getCurrentPos, getBoundingClientRect }: { piece: ChessPieces, color: ChessPieceColors, startPos: Vector2, getCurrentPos: () => Vector2, getBoundingClientRect: () => DOMRect }) {
     const mouseDown = React.useRef(false);
     const [position, setPosition] = React.useState(startPos);
     const ref = React.useRef<HTMLDivElement | null>(null);
@@ -57,10 +73,45 @@ export default function ChessPiece({ piece, startPos, getCurrentPos, getBounding
         onTouchMove={mouseMoveHandler}
 
         >
-            {piece == ChessPieces.PAWN ? <img src="/pawn-w.svg" draggable="false" style={{
+            {/* {piece == ChessPieces.PAWN ? <img src="/pawn-w.svg" draggable="false" style={{
                 width: "100%",
                 height: "100%",
-            }} /> : ""}
+            }} /> : ""} */}
+            {(() => {
+                let src = "/pawn-w.svg";
+                let pieceName = "pawn";
+
+                switch (piece) {
+                case ChessPieces.PAWN:
+                    pieceName = "pawn";
+                    break;
+                case ChessPieces.ROOK:
+                    pieceName = "rook";
+                    break;
+                case ChessPieces.BISHOP:
+                    pieceName = "bishop";
+                    break;
+                case ChessPieces.KNIGHT:
+                    pieceName = "knight";
+                    break;
+                case ChessPieces.KING:
+                    pieceName = "king";
+                    break;
+                case ChessPieces.QUEEN:
+                    pieceName = "queen";
+                    break;
+                default:
+                    pieceName = "pawn";
+                    break;
+                }
+
+                src = `/${pieceName}-${color == ChessPieceColors.BLACK ? "b" : "w"}.svg`;
+
+                return <img src={src} draggable="false" style={{
+                    width: "100%",
+                    height: "100%",
+                }} />;
+            })()}
         </div>
     );
 }
