@@ -1,5 +1,6 @@
 import React from "react";
 import { Vector2 } from "../Vector";
+import { useChessPieceContext } from "@/context";
 
 export enum ChessPieces {
     PAWN,
@@ -21,11 +22,12 @@ export interface ChessPieceData {
     elem: React.JSX.Element,
 }
 
-export default function ChessPiece({ piece, color, startPos, getCurrentPos, getBoundingClientRect }: { piece: ChessPieces, color: ChessPieceColors, startPos: Vector2, getCurrentPos: () => Vector2, getBoundingClientRect: () => DOMRect }) {
+export default function ChessPiece({ piece, color, startPos }: { piece: ChessPieces, color: ChessPieceColors, startPos: Vector2 }) {
     const mouseDown = React.useRef(false);
     const [position, setPosition] = React.useState(startPos);
     const ref = React.useRef<HTMLDivElement | null>(null);
     // const boundingClientRect = React.useRef(getBoundingClientRect());
+    const { getCurrentPos, getBoundingClientRect } = useChessPieceContext();
 
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = true;

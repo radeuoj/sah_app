@@ -1,3 +1,4 @@
+import "./globals.css";
 import "./style.css";
 import ChessBoard from "@/components/ChessBoard"
 

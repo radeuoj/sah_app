@@ -19,13 +19,23 @@
     pointer-events: none;
 }
 
-/* .chess_square {
+.chess_square {
 }
 
 .chess_square_black {
-    background-color: #642e88;
+    background: #8A2D3B;
 }
 
 .chess_square_white {
-    background-color: #f2dfff;
-} */
+    background: #FBDB93;
+}
+
+@media (prefers-color-scheme: dark) {
+    .chess_square_black {
+        background: #332D56;
+    }
+
+    .chess_square_white {
+        background: #71C0BB;
+    }
+}
