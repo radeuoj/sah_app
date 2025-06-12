@@ -1,6 +1,7 @@
 import React from "react";
-import { Vector2 } from "../Vector";
+import { Vector2, gamePosToScreenPos, screenPosToGamePos } from "../Vector";
 import { useChessPieceContext } from "@/context";
+import ChessPieceData from "./ChessPieceData";
 
 export enum ChessPieces {
     PAWN,
@@ -16,18 +17,12 @@ export enum ChessPieceColors {
     WHITE,
 }
 
-export interface ChessPieceData {
-    piece: ChessPieces,
-    color: ChessPieceColors,
-    elem: React.JSX.Element,
-}
-
-export default function ChessPiece({ piece, color, startPos }: { piece: ChessPieces, color: ChessPieceColors, startPos: Vector2 }) {
+export default function ChessPiece({ data }: { data: ChessPieceData }) {
     const mouseDown = React.useRef(false);
-    const [position, setPosition] = React.useState(startPos);
+    // const [position, setPosition] = React.useState(data.position);
     const ref = React.useRef<HTMLDivElement | null>(null);
     // const boundingClientRect = React.useRef(getBoundingClientRect());
-    const { getCurrentPos, getBoundingClientRect } = useChessPieceContext();
+    const { getCurrentPos, getBoundingClientRect, playingAsWhite } = useChessPieceContext();
 
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = true;
@@ -36,7 +31,10 @@ export default function ChessPiece({ piece, color, startPos }: { piece: ChessPie
 
     const mouseUpHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = false;
-        setPosition({ x: Math.floor(getCurrentPos().x), y: Math.floor(getCurrentPos().y) });
+        // setPosition({ x: Math.floor(getCurrentPos().x), y: Math.floor(getCurrentPos().y) });
+        const screenPos = new Vector2(Math.floor(getCurrentPos().x), Math.floor(getCurrentPos().y));
+        ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+        data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
         ref.current?.style.setProperty("z-index", null);
     }
 
@@ -56,15 +54,15 @@ export default function ChessPiece({ piece, color, startPos }: { piece: ChessPie
         const x = (clientX - getBoundingClientRect().x) / getBoundingClientRect().width * 8;
         const y = (clientY - getBoundingClientRect().y) / getBoundingClientRect().height * 8;
         if (mouseDown.current)
-            setPosition({ x: x - 0.5, y: y - 0.5 });
+            ref.current?.style.setProperty("translate", `${(x - 0.5) * 100}% ${(y - 0.5) * 100}%`);
+            // setPosition({ x: x - 0.5, y: y - 0.5 });
     }
 
     return (
-        <div ref={ref} style={{
-            height: "12.5%",
-            width: "12.5%",
-            position: "absolute",
-            transform: `translate(${position.x * 100}%, ${position.y * 100}%)`,
+        <div ref={ref} className="chess_piece" id={data.key} style={{
+            // transform: `translate(${position.x * 100}%, ${position.y * 100}%)`,
+            translate: `${gamePosToScreenPos(data.position, playingAsWhite).x * 100}% ${gamePosToScreenPos(data.position, playingAsWhite).y * 100}%`,
+            // transform: playingAsWhite ? `translate(${position.x * 100}%, ${position.y * 100}%)` : `translate(${(7 - position.x) * 100}%, ${(7 - position.y) * 100}%)`,
         }}
 
         onMouseDown={mouseDownHandler}
@@ -83,7 +81,7 @@ export default function ChessPiece({ piece, color, startPos }: { piece: ChessPie
                 let src = "/pawn-w.svg";
                 let pieceName = "pawn";
 
-                switch (piece) {
+                switch (data.piece) {
                 case ChessPieces.PAWN:
                     pieceName = "pawn";
                     break;
@@ -107,7 +105,7 @@ export default function ChessPiece({ piece, color, startPos }: { piece: ChessPie
                     break;
                 }
 
-                src = `/${pieceName}-${color == ChessPieceColors.BLACK ? "b" : "w"}.svg`;
+                src = `/${pieceName}-${data.color == ChessPieceColors.BLACK ? "b" : "w"}.svg`;
 
                 return <img src={src} draggable="false" style={{
                     width: "100%",

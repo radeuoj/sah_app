@@ -4,6 +4,7 @@ import { Vector2 } from "./components/Vector";
 interface ChessPieceContextData {
     getCurrentPos: () => Vector2, 
     getBoundingClientRect: () => DOMRect,
+    playingAsWhite: boolean,
 }
 
 export const ChessPieceContext = createContext<ChessPieceContextData | undefined>(undefined);

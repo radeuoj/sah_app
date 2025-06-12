@@ -7,7 +7,7 @@ export enum ChessSquareColor {
     WHITE,
 }
 
-export default function ChessSquare({ color, position, setCurrentPos }: { color: ChessSquareColor, position: Vector2, setCurrentPos: (pos: Vector2) => void }) {
+export default function ChessSquare({ color, position, setCurrentPos, gamePos }: { color: ChessSquareColor, position: Vector2, setCurrentPos: (pos: Vector2) => void, gamePos: string }) {
     return (
         <div className={`chess_square chess_square_${color == ChessSquareColor.BLACK ? "black" : "white"}`} style={{
             // backgroundColor: color == ChessSquareColor.BLACK ? "#8A2D3B" : "#FBDB93",
@@ -24,6 +24,8 @@ export default function ChessSquare({ color, position, setCurrentPos }: { color:
                 height: "100%",
             }} /> : ""} */}
         {position.x}{position.y}
+        <br/>
+        {gamePos}
         </div>
     );
 }

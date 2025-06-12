@@ -2,122 +2,51 @@
 
 import "./style.css";
 import ChessSquare, { ChessSquareColor } from "../ChessSquare";
-import ChessPiece, { ChessPieceColors, ChessPieces, ChessPieceData } from "../ChessPiece";
+import ChessPiece, { ChessPieceColors, ChessPieces } from "../ChessPiece";
+import ChessPieceData from "../ChessPiece/ChessPieceData";
 import React, { ReactNode, useRef } from "react";
-import { Vector2 } from "../Vector";
+import { screenPosToGamePos, Vector2 } from "../Vector";
 import { ChessPieceContext } from "@/context";
 
 function getStartingPosition(): ChessPieceData[] {
     const result: ChessPieceData[] = [];
 
     // KINGS
-    result.push({
-        piece: ChessPieces.KING,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.KING} color={ChessPieceColors.WHITE} key="wk" startPos={{ x: 4, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.KING,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.KING} color={ChessPieceColors.BLACK} key="bk" startPos={{ x: 4, y: 0 }} />,
-    });
+    result.push(new ChessPieceData(ChessPieces.KING, ChessPieceColors.WHITE, new Vector2(5, 1)));
+    result.push(new ChessPieceData(ChessPieces.KING, ChessPieceColors.BLACK, new Vector2(5, 8)));
 
     // QUEENS
-    result.push({
-        piece: ChessPieces.QUEEN,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.QUEEN} color={ChessPieceColors.WHITE} key="wq" startPos={{ x: 3, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.QUEEN,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.QUEEN} color={ChessPieceColors.BLACK} key="bq" startPos={{ x: 3, y: 0 }} />,
-    });
+    result.push(new ChessPieceData(ChessPieces.QUEEN, ChessPieceColors.WHITE, new Vector2(4, 1)));
+    result.push(new ChessPieceData(ChessPieces.QUEEN, ChessPieceColors.BLACK, new Vector2(4, 8)));
 
     // BISHOPS
-    result.push({
-        piece: ChessPieces.BISHOP,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.WHITE} key="wb1" startPos={{ x: 2, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.BISHOP,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.WHITE} key="wb2" startPos={{ x: 5, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.BISHOP,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.BLACK} key="bb1" startPos={{ x: 2, y: 0 }} />,
-    },
-    {
-        piece: ChessPieces.BISHOP,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.BISHOP} color={ChessPieceColors.BLACK} key="bb2" startPos={{ x: 5, y: 0 }} />,
-    });
+    result.push(new ChessPieceData(ChessPieces.BISHOP, ChessPieceColors.WHITE, new Vector2(3, 1)));
+    result.push(new ChessPieceData(ChessPieces.BISHOP, ChessPieceColors.WHITE, new Vector2(6, 1)));
+    result.push(new ChessPieceData(ChessPieces.BISHOP, ChessPieceColors.BLACK, new Vector2(3, 8)));
+    result.push(new ChessPieceData(ChessPieces.BISHOP, ChessPieceColors.BLACK, new Vector2(6, 8)));
 
     // KNIGHTS
-    result.push({
-        piece: ChessPieces.KNIGHT,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.WHITE} key="wn1" startPos={{ x: 1, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.KNIGHT,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.WHITE} key="wn2" startPos={{ x: 6, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.KNIGHT,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.BLACK} key="bn1" startPos={{ x: 1, y: 0 }} />,
-    },
-    {
-        piece: ChessPieces.KNIGHT,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.KNIGHT} color={ChessPieceColors.BLACK} key="bn2" startPos={{ x: 6, y: 0 }} />,
-    });
+    result.push(new ChessPieceData(ChessPieces.KNIGHT, ChessPieceColors.WHITE, new Vector2(2, 1)));
+    result.push(new ChessPieceData(ChessPieces.KNIGHT, ChessPieceColors.WHITE, new Vector2(7, 1)));
+    result.push(new ChessPieceData(ChessPieces.KNIGHT, ChessPieceColors.BLACK, new Vector2(2, 8)));
+    result.push(new ChessPieceData(ChessPieces.KNIGHT, ChessPieceColors.BLACK, new Vector2(7, 8)));
 
     // ROOKS
-    result.push({
-        piece: ChessPieces.ROOK,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.WHITE} key="wr1" startPos={{ x: 0, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.ROOK,
-        color: ChessPieceColors.WHITE,
-        elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.WHITE} key="wr2" startPos={{ x: 7, y: 7 }} />,
-    },
-    {
-        piece: ChessPieces.ROOK,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.BLACK} key="br1" startPos={{ x: 0, y: 0 }} />,
-    },
-    {
-        piece: ChessPieces.ROOK,
-        color: ChessPieceColors.BLACK,
-        elem: <ChessPiece piece={ChessPieces.ROOK} color={ChessPieceColors.BLACK} key="br2" startPos={{ x: 7, y: 0 }} />,
-    });
+    result.push(new ChessPieceData(ChessPieces.ROOK, ChessPieceColors.WHITE, new Vector2(1, 1)));
+    result.push(new ChessPieceData(ChessPieces.ROOK, ChessPieceColors.WHITE, new Vector2(8, 1)));
+    result.push(new ChessPieceData(ChessPieces.ROOK, ChessPieceColors.BLACK, new Vector2(1, 8)));
+    result.push(new ChessPieceData(ChessPieces.ROOK, ChessPieceColors.BLACK, new Vector2(8, 8)));
 
     // PAWNS
-    for (let i = 0; i < 8; i++)  {
-        result.push({
-            piece: ChessPieces.PAWN,
-            color: ChessPieceColors.WHITE,
-            elem: <ChessPiece piece={ChessPieces.PAWN} color={ChessPieceColors.WHITE} key={`wp${i + 1}`} startPos={{ x: i, y: 6 }} />,
-        },
-        {
-            piece: ChessPieces.PAWN,
-            color: ChessPieceColors.BLACK,
-            elem: <ChessPiece piece={ChessPieces.PAWN} color={ChessPieceColors.BLACK} key={`bp${i + 1}`} startPos={{ x: i, y: 1 }} />,
-        });
+    for (let i = 1; i <= 8; i++)  {
+        result.push(new ChessPieceData(ChessPieces.PAWN, ChessPieceColors.WHITE, new Vector2(i, 2)));
+        result.push(new ChessPieceData(ChessPieces.PAWN, ChessPieceColors.BLACK, new Vector2(i, 7)));
     }
 
     return result;
 }
 
-export default function ChessBoard() {
+export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean }) {
     // const [pos, setPos] = React.useState<Position>({ x: 0, y: 0 });
     const pos = useRef<Vector2>({ x: 0, y: 0 });
     const ref = useRef<HTMLDivElement | null>(null);
@@ -201,12 +130,14 @@ export default function ChessBoard() {
         >
             {(() => {
                 const squares: ReactNode[] = [];
-                for (let i = 1; i <= 8; i++) {
-                    for (let j = 1; j <= 8; j++) {
+                for (let i = 0; i < 8; i++) {
+                    for (let j = 0; j < 8; j++) {
                         let color = i % 2 == j % 2 ? ChessSquareColor.WHITE : ChessSquareColor.BLACK;
+                        const gamePos = screenPosToGamePos(new Vector2(j, i), playingAsWhite);
+                        const gamePosString = String.fromCharCode("a".charCodeAt(0) + gamePos.x - 1) + gamePos.y.toString();
                         squares.push(<ChessSquare color={color} key={i * 10 + j} position={{ x: j, y: i }} setCurrentPos={(pos_: Vector2) => {
                             pos.current = pos_;
-                        }} />);
+                        }} gamePos={gamePosString} />);
                     }
                 }
                 return squares;
@@ -222,6 +153,7 @@ export default function ChessBoard() {
             <ChessPieceContext.Provider value={{
                 getCurrentPos: () => pos.current,
                 getBoundingClientRect: () => ref.current?.getBoundingClientRect() as DOMRect,
+                playingAsWhite,
             }}>
                 {Object.values(game.current).map(v => {
                     return v.elem;

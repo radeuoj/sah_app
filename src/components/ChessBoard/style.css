@@ -20,6 +20,7 @@
 }
 
 .chess_square {
+    font-size: 80%;
 }
 
 .chess_square_black {
@@ -28,6 +29,12 @@
 
 .chess_square_white {
     background: #FBDB93;
+}
+
+.chess_piece {
+    height: 12.5%;
+    width: 12.5%;
+    position: absolute;
 }
 
 @media (prefers-color-scheme: dark) {
