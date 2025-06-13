@@ -22,7 +22,7 @@ export default function ChessPiece({ data }: { data: ChessPieceData }) {
     // const [position, setPosition] = React.useState(data.position);
     const ref = React.useRef<HTMLDivElement | null>(null);
     // const boundingClientRect = React.useRef(getBoundingClientRect());
-    const { getCurrentPos, getBoundingClientRect, playingAsWhite } = useChessPieceContext();
+    const { getCurrentPos, getBoundingClientRect, playingAsWhite, requestMove } = useChessPieceContext();
 
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = true;
@@ -32,9 +32,14 @@ export default function ChessPiece({ data }: { data: ChessPieceData }) {
     const mouseUpHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = false;
         // setPosition({ x: Math.floor(getCurrentPos().x), y: Math.floor(getCurrentPos().y) });
-        const screenPos = new Vector2(Math.floor(getCurrentPos().x), Math.floor(getCurrentPos().y));
-        ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
-        data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
+        let screenPos = new Vector2(Math.floor(getCurrentPos().x), Math.floor(getCurrentPos().y));
+        if (requestMove(data.position, screenPosToGamePos(screenPos, playingAsWhite)))
+            ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+        else {
+            screenPos = gamePosToScreenPos(data.position, playingAsWhite);
+            ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+        }
+        // data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
         ref.current?.style.setProperty("z-index", null);
     }
 

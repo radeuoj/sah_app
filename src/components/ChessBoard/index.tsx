@@ -53,7 +53,24 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
     const targetSquare = useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
 
-    const game = useRef<ChessPieceData[]>(getStartingPosition());
+    const [game, setGame] = React.useState<ChessPieceData[]>(getStartingPosition());
+
+    function requestMove(from: Vector2, to: Vector2): boolean {
+        if (from.x == to.x && from.y == to.y) return false;
+
+        const fromData = game.find((el) => el.position.x == from.x && el.position.y == from.y);
+        if (fromData == undefined) throw `There is no piece at ${from}`;
+
+        const toData = game.find((el) => el.position.x == to.x && el.position.y == to.y);
+        if (toData != undefined) {
+            if (fromData.color == toData.color) return false;
+            setGame(g => g.filter(el => el.key != toData.key));
+        }
+
+        fromData.setPosition(to);
+        
+        return true;
+    }
     
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         mouseDown.current = true;
@@ -135,9 +152,9 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
                         let color = i % 2 == j % 2 ? ChessSquareColor.WHITE : ChessSquareColor.BLACK;
                         const gamePos = screenPosToGamePos(new Vector2(j, i), playingAsWhite);
                         const gamePosString = String.fromCharCode("a".charCodeAt(0) + gamePos.x - 1) + gamePos.y.toString();
-                        squares.push(<ChessSquare color={color} key={i * 10 + j} position={{ x: j, y: i }} setCurrentPos={(pos_: Vector2) => {
+                        squares.push(<ChessSquare color={color} key={i * 10 + j} position={{ x: j, y: i }} /*setCurrentPos={(pos_: Vector2) => {
                             pos.current = pos_;
-                        }} gamePos={gamePosString} />);
+                        }}*/ gamePos={gamePosString} />);
                     }
                 }
                 return squares;
@@ -154,8 +171,9 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
                 getCurrentPos: () => pos.current,
                 getBoundingClientRect: () => ref.current?.getBoundingClientRect() as DOMRect,
                 playingAsWhite,
+                requestMove,
             }}>
-                {Object.values(game.current).map(v => {
+                {Object.values(game).map(v => {
                     return v.elem;
                 })}
             </ChessPieceContext.Provider>
