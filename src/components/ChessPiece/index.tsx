@@ -18,49 +18,59 @@ export enum ChessPieceColors {
 }
 
 export default function ChessPiece({ data }: { data: ChessPieceData }) {
-    const mouseDown = React.useRef(false);
+    // const mouseDown = React.useRef(false);
     // const [position, setPosition] = React.useState(data.position);
     const ref = React.useRef<HTMLDivElement | null>(null);
     // const boundingClientRect = React.useRef(getBoundingClientRect());
-    const { getCurrentPos, getBoundingClientRect, playingAsWhite, requestMove } = useChessPieceContext();
+    const { getCurrentPos, getBoundingClientRect, playingAsWhite, requestMove, setActivePiece } = useChessPieceContext();
 
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        mouseDown.current = true;
+        // mouseDown.current = true;
+        setActivePiece(data.position);
         ref.current?.style.setProperty("z-index", "2");
     }
 
+    data.setScreenPosition = (screenPos: Vector2) => {
+        ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+    }
+
+    data.setZIndex = (z: number | string | null) => {
+        if (typeof z == "number") z = z.toString();
+        ref.current?.style.setProperty("z-index", z);
+    }
+
     const mouseUpHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
-        mouseDown.current = false;
-        // setPosition({ x: Math.floor(getCurrentPos().x), y: Math.floor(getCurrentPos().y) });
-        let screenPos = new Vector2(Math.floor(getCurrentPos().x), Math.floor(getCurrentPos().y));
-        if (requestMove(data.position, screenPosToGamePos(screenPos, playingAsWhite)))
-            ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
-        else {
-            screenPos = gamePosToScreenPos(data.position, playingAsWhite);
-            ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
-        }
-        // data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
-        ref.current?.style.setProperty("z-index", null);
+        // mouseDown.current = false;
+        // // setPosition({ x: Math.floor(getCurrentPos().x), y: Math.floor(getCurrentPos().y) });
+        // let screenPos = new Vector2(Math.floor(getCurrentPos().x), Math.floor(getCurrentPos().y));
+        // if (requestMove(data.position, screenPosToGamePos(screenPos, playingAsWhite)))
+        //     ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+        // else {
+        //     screenPos = gamePosToScreenPos(data.position, playingAsWhite);
+        //     ref.current?.style.setProperty("translate", `${screenPos.x * 100}% ${screenPos.y * 100}%`);
+        // }
+        // // data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
+        // ref.current?.style.setProperty("z-index", null);
     }
 
     const mouseMoveHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
         // event.preventDefault();
         // event.stopPropagation();
 
-        let clientX: number, clientY: number;
-        if ('touches' in event) {
-            clientX = event.touches[0].clientX;
-            clientY = event.touches[0].clientY;
-        } else {
-            clientX = event.clientX;
-            clientY = event.clientY;
-        }
+        // let clientX: number, clientY: number;
+        // if ('touches' in event) {
+        //     clientX = event.touches[0].clientX;
+        //     clientY = event.touches[0].clientY;
+        // } else {
+        //     clientX = event.clientX;
+        //     clientY = event.clientY;
+        // }
 
-        const x = (clientX - getBoundingClientRect().x) / getBoundingClientRect().width * 8;
-        const y = (clientY - getBoundingClientRect().y) / getBoundingClientRect().height * 8;
-        if (mouseDown.current)
-            ref.current?.style.setProperty("translate", `${(x - 0.5) * 100}% ${(y - 0.5) * 100}%`);
-            // setPosition({ x: x - 0.5, y: y - 0.5 });
+        // const x = (clientX - getBoundingClientRect().x) / getBoundingClientRect().width * 8;
+        // const y = (clientY - getBoundingClientRect().y) / getBoundingClientRect().height * 8;
+        // if (mouseDown.current)
+        //     ref.current?.style.setProperty("translate", `${(x - 0.5) * 100}% ${(y - 0.5) * 100}%`);
+        //     // setPosition({ x: x - 0.5, y: y - 0.5 });
     }
 
     return (

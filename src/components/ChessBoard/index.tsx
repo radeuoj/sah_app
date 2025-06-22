@@ -5,7 +5,7 @@ import ChessSquare, { ChessSquareColor } from "../ChessSquare";
 import ChessPiece, { ChessPieceColors, ChessPieces } from "../ChessPiece";
 import ChessPieceData from "../ChessPiece/ChessPieceData";
 import React, { ReactNode, useRef } from "react";
-import { screenPosToGamePos, Vector2 } from "../Vector";
+import { gamePosToScreenPos, screenPosToGamePos, Vector2 } from "../Vector";
 import { ChessPieceContext } from "@/context";
 
 function getStartingPosition(): ChessPieceData[] {
@@ -52,6 +52,7 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
     const ref = useRef<HTMLDivElement | null>(null);
     const targetSquare = useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
+    const activePiece = React.useRef<ChessPieceData | null>(null);
 
     const [game, setGame] = React.useState<ChessPieceData[]>(getStartingPosition());
 
@@ -70,6 +71,12 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
         fromData.setPosition(to);
         
         return true;
+    }
+
+    function setActivePiece(initPos: Vector2) {
+        const ap = game.find((v) => v.position == initPos);
+        if (!ap) throw `No piece found at ${initPos}`;
+        activePiece.current = ap;
     }
     
     const mouseDownHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
@@ -99,12 +106,26 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
         }
     }
 
-    const mouseUpHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const mouseUpHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement> | MouseEvent | TouchEvent) => {
         mouseDown.current = false;
         targetSquare.current?.style.setProperty("visibility", "hidden");
+
+        if (activePiece.current) {
+            let screenPos = new Vector2(Math.floor(pos.current.x), Math.floor(pos.current.y));
+            if (requestMove(activePiece.current.position, screenPosToGamePos(screenPos, playingAsWhite)))
+                activePiece.current.setScreenPosition(screenPos);
+            else {
+                screenPos = gamePosToScreenPos(activePiece.current.position, playingAsWhite);
+                activePiece.current.setScreenPosition(screenPos);
+            }
+            // data.setPosition(screenPosToGamePos(screenPos, playingAsWhite));
+            activePiece.current.setZIndex(null);
+
+            activePiece.current = null;
+        }
     }
 
-    const mouseMoveHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const mouseMoveHandler = (event: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement> | MouseEvent | TouchEvent) => {
         event.preventDefault();
         event.stopPropagation();
 
@@ -129,7 +150,33 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
                 targetSquare.current?.style.setProperty("transform", `translate(${Math.floor(pos.current.x)}00%, ${Math.floor(pos.current.y)}00%)`);
             }
         }
+
+        if (activePiece.current && ref.current) {
+            let clientX: number, clientY: number;
+            if ('touches' in event) {
+                clientX = event.touches[0].clientX;
+                clientY = event.touches[0].clientY;
+            } else {
+                clientX = event.clientX;
+                clientY = event.clientY;
+            }
+
+            const rect = ref.current.getBoundingClientRect();
+            const x = (clientX - rect.x) / rect.width * 8;
+            const y = (clientY - rect.y) / rect.height * 8;
+
+            if (mouseDown.current) {
+                console.log(`${x} ${y}`);
+                activePiece.current.setScreenPosition(new Vector2(x - 0.5, y - 0.5));
+            }
+                // setPosition({ x: x - 0.5, y: y - 0.5 });
+        }
     };
+
+    // document.body.addEventListener("mouseup", mouseUpHandler);
+    // document.body.addEventListener("touchend", mouseUpHandler);
+    // document.body.addEventListener("mousemove", mouseMoveHandler);
+    // document.body.addEventListener("touchmove", mouseMoveHandler);
 
     return (
         <div className="chess_board" style={{
@@ -172,6 +219,7 @@ export default function ChessBoard({ playingAsWhite }: { playingAsWhite: boolean
                 getBoundingClientRect: () => ref.current?.getBoundingClientRect() as DOMRect,
                 playingAsWhite,
                 requestMove,
+                setActivePiece,
             }}>
                 {Object.values(game).map(v => {
                     return v.elem;

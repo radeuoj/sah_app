@@ -31,4 +31,7 @@ export default class ChessPieceData {
         console.log(`Moved ${this.key} from ${this.position} to ${position}`);
         this.position = position;
     }
+
+    setScreenPosition = (screenPos: Vector2) => {};
+    setZIndex = (z: number | string | null) => {};
 }

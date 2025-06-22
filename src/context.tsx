@@ -6,6 +6,7 @@ interface ChessPieceContextData {
     getBoundingClientRect: () => DOMRect,
     playingAsWhite: boolean,
     requestMove: (from: Vector2, to: Vector2) => boolean,
+    setActivePiece: (pos: Vector2) => void,
 }
 
 export const ChessPieceContext = createContext<ChessPieceContextData | undefined>(undefined);
