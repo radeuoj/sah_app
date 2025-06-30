@@ -13,6 +13,7 @@ export default function ChessBoard({ game }: { game: ChessGame }) {
     const [playingAsWhite, setPlayingAsWhite] = React.useState(true);
     const [pieces, setPieces] = React.useState<ChessPiece[]>([]);
     const ref = React.useRef<HTMLDivElement | null>(null);
+    const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => {
         game.setUpdatePieces((pieces) => setPieces(pieces));
@@ -46,9 +47,57 @@ export default function ChessBoard({ game }: { game: ChessGame }) {
     function getChessPieces(): React.ReactNode[] {
         return pieces.map((p) => <ChesspieceComponent key={p.id} piece={p} game={game} />);
     }
+
+    function getScreenPosFromEvent(e: React.MouseEvent | React.TouchEvent): Vector2 {
+        const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+        const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+
+        const rect = ref.current?.getBoundingClientRect() as DOMRect;
+        const x = (clientX - rect.x) / rect.width * 8;
+        const y = (clientY - rect.y) / rect.height * 8;
+        
+        return vec2(x, y);
+    }
+
+    function handleMouseMove(e: React.MouseEvent | React.TouchEvent) {
+        const newScreenPos = getScreenPosFromEvent(e);
+        newScreenPos.x = Math.floor(newScreenPos.x);
+        newScreenPos.y = Math.floor(newScreenPos.y);
+        
+        if (newScreenPos.x < 0 || newScreenPos.x >= 8 || newScreenPos.y < 0 || newScreenPos.y >= 8) hideTargetSquare();
+        else showTargetSquare();
+
+        moveTargetSquare(newScreenPos);
+    }
+
+    function handleOnMouseEnter(e: React.MouseEvent | React.TouchEvent) {
+        const newScreenPos = getScreenPosFromEvent(e);
+        newScreenPos.x = Math.floor(newScreenPos.x);
+        newScreenPos.y = Math.floor(newScreenPos.y);
+
+        showTargetSquare();
+        moveTargetSquare(newScreenPos);
+    }
+
+    function handleOnMouseLeave() {
+        hideTargetSquare();
+    }
+
+    function showTargetSquare() {
+        targetSquareRef.current?.style.setProperty("visibility", "visible");
+    }
+
+    function moveTargetSquare(pos: Vector2) {
+        targetSquareRef.current?.style.setProperty("translate", `${pos.x * 100}% ${pos.y * 100}%`);
+    }
+
+    function hideTargetSquare() {
+        targetSquareRef.current?.style.setProperty("visibility", "hidden");
+    }
     
-    return <div ref={ref} className="chess_board">
+    return <div ref={ref} className="chess_board" onMouseEnter={handleOnMouseEnter} onMouseLeave={handleOnMouseLeave} onMouseMove={handleMouseMove} onTouchStart={handleOnMouseEnter} onTouchEnd={handleOnMouseLeave} onTouchMove={handleMouseMove}>
         {getChessSquares()}
+        <div className="target_square" ref={targetSquareRef} style={{ visibility: "hidden" }}></div>
 
         <ChessBoardContext.Provider value={{
             screenPosToGamePos,
