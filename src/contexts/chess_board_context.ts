@@ -5,6 +5,7 @@ export interface ChessBoardContextData {
     screenPosToGamePos: (pos: Vector2) => Vector2,
     gamePosToScreenPos: (pos: Vector2) => Vector2,
     getBoundingClientRect: () => DOMRect,
+    playingAsWhite: boolean,
 }
 
 export const ChessBoardContext = createContext<ChessBoardContextData | undefined>(undefined);

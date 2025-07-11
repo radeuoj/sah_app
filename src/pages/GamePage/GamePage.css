@@ -1,7 +1,9 @@
+:root {
+    --board_size: min(80vh, 100vw);
+}
+
 main {
     display: flex;
-    align-items: center;
-    justify-content: center;
 
     user-select: none;
 }
@@ -14,11 +16,73 @@ main > .left, main > .right {
 main > .center {
     height: 100%;
     display: flex;
+    justify-content: center;
     align-items: center;
-    flex-direction: column;
+    flex-direction: column; 
 }
 
-main > .center > .top, main > .center > .bottom {
+/* main > .center > .top, main > .center > .bottom {
     width: 100%;
     flex: 1;
+} */
+
+main > .right {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.chess_moves {
+    width: min(80%, 16vw);
+    /* max-width: 80%; */
+    height: var(--board_size);
+    display: grid;
+    gap: 1vh;
+    grid-template-columns: 1fr 1fr;
+    align-content: start;
+    overflow-y: auto;
+    /* scrollbar-width: none; */
+}
+
+.chess_moves > .chess_move {
+    height: fit-content;
+    /* min-width: calc(0.25 * var(--board_size)); */
+    /* padding: 0 calc(0.07 * var(--board_size)); */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 1vh;
+    text-wrap: nowrap;
+}
+
+@media screen and (max-aspect-ratio: 1.32/1) {
+    .chess_moves {
+        /* visibility: collapse; */
+        height: min-content;
+        width: var(--board_size);
+        grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+        grid-template-rows: 1fr 1fr;
+        align-content: start;
+        grid-auto-flow: column;
+        overflow-y: hidden;
+        overflow-x: auto;
+    }
+
+    .chess_moves > .chess_move {
+        min-width: calc(0.2 * var(--board_size));
+        font-size: calc(0.04 * var(--board_size));
+    }
+
+    main {
+        flex-direction: column;
+    }
+
+    main > .left, main > .center, main > .right {
+        width: 100%;
+        height: auto;
+    }
+
+    /* main > .center > .top, main > .center > .bottom {
+        height: 0;
+    } */
 }

@@ -1,7 +1,7 @@
 .chess_board {
     position: relative;
-    width: min(80vh, 100vw);
-    height: min(80vh, 100vw);
+    width: var(--board_size);
+    height: var(--board_size);
 
     background-color: lightblue;
     
@@ -12,13 +12,13 @@
 
 .chess_square {
     display: flex;
-    flex-direction: column;
+    flex-direction: column-reverse;
     justify-content: space-between;
     align-items: flex-start;
     padding: 5%;
     font-weight: 900;
     font-style: italic;
-    font-size: calc(0.025 * min(80vh, 100vw));
+    font-size: calc(0.025 * var(--board_size));
 }
 
 .chess_square_black {
@@ -60,6 +60,6 @@
     width: 12.5%;
     position: absolute;
 
-    border: calc(0.008 * min(80vh, 100vw)) solid rgb(143, 143, 143);
+    border: calc(0.008 * var(--board_size)) solid rgb(143, 143, 143);
     box-sizing: border-box;
 }

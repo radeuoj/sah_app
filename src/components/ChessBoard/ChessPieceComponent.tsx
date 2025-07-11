@@ -7,8 +7,12 @@ import { vec2, type Vector2 } from "../../Vector";
 export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGame }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
-    const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect } = useChessBoardContext();
+    const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect, playingAsWhite } = useChessBoardContext();
     const screenPos = React.useRef(gamePosToScreenPos(piece.position));
+
+    React.useEffect(() => {
+        updateScreenPos(gamePosToScreenPos(piece.position));
+    }, [playingAsWhite]);
 
     const imageSrc = `./assets/chess_pieces/${piece.type}-${piece.color == "white" ? "w" : "b"}.svg`;
 
@@ -24,7 +28,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
             document.removeEventListener("mouseup", handleMouseUp);
             document.removeEventListener("touchend", handleMouseUp);
         };
-    }, []);
+    }, [playingAsWhite]);
 
     function updateScreenPos(pos: Vector2) {
         screenPos.current = pos;
@@ -61,6 +65,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
         game.requestMove(piece, gamePos);
 
         mouseDown.current = false;
+        console.log(playingAsWhite);
         updateScreenPos(gamePosToScreenPos(piece.position));
         updateZIndex(null);
     }

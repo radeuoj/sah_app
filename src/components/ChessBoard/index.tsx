@@ -9,8 +9,7 @@ import type { ChessPiece } from "../../ChessPiece";
 import ChesspieceComponent from "./ChessPieceComponent";
 import { ChessBoardContext } from "../../contexts/chess_board_context";
 
-export default function ChessBoard({ game }: { game: ChessGame }) {
-    const [playingAsWhite, setPlayingAsWhite] = React.useState(true);
+export default function ChessBoard({ game, playingAsWhite, debug }: { game: ChessGame, playingAsWhite: boolean, debug?: boolean }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
 
@@ -35,7 +34,7 @@ export default function ChessBoard({ game }: { game: ChessGame }) {
             for (let j = 0; j < 8; j++) {
                 const screenPos = vec2(j, i);
                 const chessPos = vec2ToChessNotation(screenPosToGamePos(screenPos));
-                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} screenPos={screenPos} />)
+                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} screenPos={screenPos} debug={debug} />)
             }
         }
 
@@ -101,6 +100,7 @@ export default function ChessBoard({ game }: { game: ChessGame }) {
             screenPosToGamePos,
             gamePosToScreenPos,
             getBoundingClientRect: () => ref.current?.getBoundingClientRect() as DOMRect,
+            playingAsWhite,
         }}>
             {getChessPieces()}
         </ChessBoardContext.Provider>

@@ -1,16 +1,27 @@
 import React from "react";
 import { type ChessPiece, makeChessPiece } from "./ChessPiece";
 import { vec2, type Vector2 } from "./Vector";
+import type { ChessMove } from "./ChessMove";
 
 export class ChessGame {
     public pieces: ChessPiece[];
     private setPieces: React.Dispatch<React.SetStateAction<ChessPiece[]>>;
 
+    public moves: ChessMove[];
+    private setMoves: React.Dispatch<React.SetStateAction<ChessMove[]>>;
+
     public constructor() {
         [this.pieces, this.setPieces] = React.useState<ChessPiece[]>([]);
+        [this.moves, this.setMoves] = React.useState<ChessMove[]>([]);
     }
 
     private move(piece: ChessPiece, pos: Vector2) {
+        const from = Object.assign({}, piece.position);
+        const to = Object.assign({}, pos);
+        this.setMoves((m) => [...m, {
+            from,
+            to,
+        }]);
         piece.position = pos;
     }
 
