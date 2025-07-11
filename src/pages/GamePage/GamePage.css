@@ -5,3 +5,20 @@ main {
 
     user-select: none;
 }
+
+main > .left, main > .right {
+    flex: 1;
+    height: 100%;
+}
+
+main > .center {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+}
+
+main > .center > .top, main > .center > .bottom {
+    width: 100%;
+    flex: 1;
+}

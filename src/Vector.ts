@@ -25,3 +25,5 @@ export function vec2ToChessNotation(vec: Vector2): string {
 
     return result;
 }
+
+export type StateFunc<T> = React.Dispatch<React.SetStateAction<T>>;

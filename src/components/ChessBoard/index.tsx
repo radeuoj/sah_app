@@ -11,12 +11,10 @@ import { ChessBoardContext } from "../../contexts/chess_board_context";
 
 export default function ChessBoard({ game }: { game: ChessGame }) {
     const [playingAsWhite, setPlayingAsWhite] = React.useState(true);
-    const [pieces, setPieces] = React.useState<ChessPiece[]>([]);
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
 
     React.useEffect(() => {
-        game.setUpdatePieces((pieces) => setPieces(pieces));
         game.generatePieces();
     }, []);
 
@@ -45,7 +43,7 @@ export default function ChessBoard({ game }: { game: ChessGame }) {
     }
 
     function getChessPieces(): React.ReactNode[] {
-        return pieces.map((p) => <ChesspieceComponent key={p.id} piece={p} game={game} />);
+        return game.pieces.map((p) => <ChesspieceComponent key={p.id} piece={p} game={game} />);
     }
 
     function getScreenPosFromEvent(e: React.MouseEvent | React.TouchEvent): Vector2 {
