@@ -11,8 +11,10 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     const screenPos = React.useRef(gamePosToScreenPos(piece.position));
 
     React.useEffect(() => {
+        ref.current?.style.setProperty("transition", "translate 0.15s");
         updateScreenPos(gamePosToScreenPos(piece.position));
-    }, [playingAsWhite]);
+        setTimeout(() => ref.current?.style.setProperty("transition", null), 200);
+    }, [playingAsWhite, piece.position]);
 
     const imageSrc = `./assets/chess_pieces/${piece.type}-${piece.color == "white" ? "w" : "b"}.svg`;
 
@@ -54,6 +56,9 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     }
 
     function handleMouseDown() {
+        if (game.currentMove.current != game.moves.length) return;
+        if ((game.whiteTurn.current && piece.color != "white") || (!game.whiteTurn.current && piece.color != "black")) return;
+
         mouseDown.current = true;
         updateZIndex(2);
     }
@@ -70,7 +75,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
         updateZIndex(null);
     }
 
-    return <div ref={ref} className="chess_piece" onMouseDown={handleMouseDown} onTouchStart={handleMouseDown} style={{
+    return <div id={piece.id} ref={ref} className="chess_piece" onMouseDown={handleMouseDown} onTouchStart={handleMouseDown} style={{
         translate: `${screenPos.current.x * 100}% ${screenPos.current.y * 100}%`,
         // zIndex: mouseDown ? 2 : undefined,
     }}>

@@ -34,17 +34,23 @@ main > .right {
 
 .chess_moves {
     width: min(80%, 16vw);
-    /* max-width: 80%; */
     height: var(--board_size);
+    display: flex;
+    flex-direction: column;
+}
+
+.moves_container {
+    /* max-width: 80%; */
     display: grid;
     gap: 1vh;
     grid-template-columns: 1fr 1fr;
     align-content: start;
     overflow-y: auto;
     /* scrollbar-width: none; */
+    flex: 1;
 }
 
-.chess_moves > .chess_move {
+.moves_container > .chess_move {
     height: fit-content;
     /* min-width: calc(0.25 * var(--board_size)); */
     /* padding: 0 calc(0.07 * var(--board_size)); */
@@ -55,11 +61,45 @@ main > .right {
     text-wrap: nowrap;
 }
 
-@media screen and (max-aspect-ratio: 1.32/1) {
+.moves_controls {
+    display: flex;
+    width: 100%;
+    gap: 1vh;
+}
+
+.moves_controls > button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 900;
+    border: none;
+    background-color: #007AFF;
+    color: white;
+    border-radius: 5px;
+}
+
+.moves_controls > button:hover {
+    background-color: #62aeff;
+}
+
+.moves_controls > button:active {
+    background-color: #9acbff;
+}
+
+@media screen and (max-aspect-ratio: 1.38/1) {
     .chess_moves {
-        /* visibility: collapse; */
         height: min-content;
         width: var(--board_size);
+    }
+
+    .moves_controls {
+        visibility: collapse;
+    }
+
+    .moves_container {
+        /* visibility: collapse; */
         grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
         grid-template-rows: 1fr 1fr;
         align-content: start;
@@ -68,7 +108,7 @@ main > .right {
         overflow-x: auto;
     }
 
-    .chess_moves > .chess_move {
+    .moves_container > .chess_move {
         min-width: calc(0.2 * var(--board_size));
         font-size: calc(0.04 * var(--board_size));
     }
