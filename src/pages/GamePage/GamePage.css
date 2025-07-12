@@ -95,7 +95,7 @@ main > .right {
     }
 
     .moves_controls {
-        visibility: collapse;
+        /* visibility: collapse; */
     }
 
     .moves_container {

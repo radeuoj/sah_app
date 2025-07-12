@@ -11,9 +11,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     const screenPos = React.useRef(gamePosToScreenPos(piece.position));
 
     React.useEffect(() => {
-        ref.current?.style.setProperty("transition", "translate 0.15s");
-        updateScreenPos(gamePosToScreenPos(piece.position));
-        setTimeout(() => ref.current?.style.setProperty("transition", null), 200);
+        goToCurrentGamePosition();
     }, [playingAsWhite, piece.position]);
 
     const imageSrc = `./assets/chess_pieces/${piece.type}-${piece.color == "white" ? "w" : "b"}.svg`;
@@ -35,6 +33,12 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     function updateScreenPos(pos: Vector2) {
         screenPos.current = pos;
         ref.current?.style.setProperty("translate", `${pos.x * 100}% ${pos.y * 100}%`);
+    }
+
+    function goToCurrentGamePosition() {
+        ref.current?.style.setProperty("transition", "translate 0.15s");
+        updateScreenPos(gamePosToScreenPos(piece.position));
+        setTimeout(() => ref.current?.style.setProperty("transition", null), 200);
     }
 
     function updateZIndex(zIndex: number | null) {
@@ -71,7 +75,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
 
         mouseDown.current = false;
         console.log(playingAsWhite);
-        updateScreenPos(gamePosToScreenPos(piece.position));
+        goToCurrentGamePosition();
         updateZIndex(null);
     }
 
