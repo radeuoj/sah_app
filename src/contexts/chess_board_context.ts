@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Vector2 } from "../Vector";
+import type { ChessPiece } from "../ChessPiece";
 
 export interface ChessBoardContextData {
     screenPosToGamePos: (pos: Vector2) => Vector2,
@@ -7,8 +8,9 @@ export interface ChessBoardContextData {
     getBoundingClientRect: () => DOMRect,
     playingAsWhite: boolean,
     allowTargetSquare: (allow: boolean) => void,
-    playMoveSound(): void;
-    playCaptureSound(): void;
+    playMoveSound(): void,
+    playCaptureSound(): void,
+    setSelectedPiece(piece: ChessPiece | null): void,
 }
 
 export const ChessBoardContext = createContext<ChessBoardContextData | undefined>(undefined);

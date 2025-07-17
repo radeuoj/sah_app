@@ -16,6 +16,7 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
     const shouldAllowTargetSquare = React.useRef(false);
+    const [selectedPiece, setSelectedPiece] = React.useState<ChessPiece | null>(null);
 
     const moveSoundAudio = new Audio(moveSound);
     const captureSoundAudio = new Audio(captureSound);
@@ -23,6 +24,10 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
     React.useEffect(() => {
         game.generatePieces();
     }, []);
+
+    React.useEffect(() => {
+        console.log(game.isBoardInCheck(game.pieces, game.moves));
+    }, [game.pieces]);
 
     function screenPosToGamePos(pos: Vector2): Vector2 {
         if (playingAsWhite) return { x: pos.x + 1, y: 8 - pos.y };
@@ -42,10 +47,11 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
                 const screenPos = vec2(j, i);
                 const gamePos = screenPosToGamePos(screenPos)
                 const chessPos = vec2ToChessNotation(gamePos);
-                const lastMove = game.moves.length > 0
-                && ((gamePos.x == game.moves[game.moves.length - 1].from.x && gamePos.y == game.moves[game.moves.length - 1].from.y)
-                || (gamePos.x == game.moves[game.moves.length - 1].to.x && gamePos.y == game.moves[game.moves.length - 1].to.y));
-                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} lastMove={lastMove} screenPos={screenPos} debug={debug} />)
+                const lastMove = game.currentMove.current > 0
+                && ((gamePos.x == game.moves[game.currentMove.current - 1].from.x && gamePos.y == game.moves[game.currentMove.current - 1].from.y)
+                || (gamePos.x == game.moves[game.currentMove.current - 1].to.x && gamePos.y == game.moves[game.currentMove.current - 1].to.y))
+                || (selectedPiece != null && gamePos.x == selectedPiece.position.x && gamePos.y == selectedPiece.position.y);
+                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} playingAsWhite={playingAsWhite} lastMove={lastMove} screenPos={screenPos} debug={debug} />)
             }
         }
 
@@ -54,6 +60,24 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
 
     function getChessPieces(): React.ReactNode[] {
         return game.pieces.map((p) => <ChesspieceComponent key={p.id} piece={p} game={game} />);
+    }
+
+    function getMoveSuggestions(): React.ReactNode[] {
+        if (selectedPiece == null) 
+            return [];
+
+        return game.suggestMoves(selectedPiece, game.pieces, game.moves).map((s, i) => {
+            const gamePos = s.to;
+            const screenPos = gamePosToScreenPos(gamePos);
+            const hasPiece = game.pieces.find((p) => p.position.x == gamePos.x && p.position.y == gamePos.y) != undefined;
+            return (
+                <div className="move_suggestion" key={i} style={{
+                    translate: `${screenPos.x * 100}% ${screenPos.y * 100}%`,
+                }}>
+                    <div className={hasPiece ? "big_circle" : "small_circle"} />
+                </div>
+            );
+        });
     }
 
     function getScreenPosFromEvent(e: React.MouseEvent | React.TouchEvent): Vector2 {
@@ -120,6 +144,7 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
     
     return <div ref={ref} className="chess_board" onMouseEnter={handleOnMouseEnter} onMouseLeave={handleOnMouseLeave} onMouseMove={handleMouseMove} onTouchStart={handleOnMouseEnter} onTouchEnd={handleOnMouseLeave} onTouchMove={handleMouseMove}>
         {getChessSquares()}
+        {getMoveSuggestions()}
         <div className="target_square" ref={targetSquareRef} style={{ visibility: "hidden" }}></div>
 
         <ChessBoardContext.Provider value={{
@@ -130,6 +155,7 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
             allowTargetSquare,
             playMoveSound,
             playCaptureSound,
+            setSelectedPiece: (piece: ChessPiece | null) => setSelectedPiece(piece),
         }}>
             {getChessPieces()}
         </ChessBoardContext.Provider>

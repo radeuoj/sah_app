@@ -6,4 +6,5 @@ export interface ChessMove {
     to: Vector2,
     piece: ChessPiece,
     capture: ChessPiece | null,
+    castle?: "king" | "queen",
 }
