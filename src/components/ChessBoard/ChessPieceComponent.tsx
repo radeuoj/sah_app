@@ -7,7 +7,7 @@ import { vec2, type Vector2 } from "../../Vector";
 export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGame }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
-    const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect, playingAsWhite } = useChessBoardContext();
+    const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect, playingAsWhite, allowTargetSquare, playMoveSound, playCaptureSound } = useChessBoardContext();
     const screenPos = React.useRef(gamePosToScreenPos(piece.position));
 
     React.useEffect(() => {
@@ -63,6 +63,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
         if (game.currentMove.current != game.moves.length) return;
         if ((game.whiteTurn.current && piece.color != "white") || (!game.whiteTurn.current && piece.color != "black")) return;
 
+        allowTargetSquare(true);
         mouseDown.current = true;
         updateZIndex(2);
     }
@@ -71,10 +72,16 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
         if (!mouseDown.current) return;
 
         const gamePos = screenPosToGamePos(vec2(Math.floor(screenPos.current.x + 0.5), Math.floor(screenPos.current.y + 0.5)));
-        game.requestMove(piece, gamePos);
+        const success = game.requestMove(piece, gamePos);
 
+        if (success == "success") {
+            playMoveSound();
+        } else if (success == "capture") {
+            playCaptureSound();
+        }
+
+        allowTargetSquare(false);
         mouseDown.current = false;
-        console.log(playingAsWhite);
         goToCurrentGamePosition();
         updateZIndex(null);
     }

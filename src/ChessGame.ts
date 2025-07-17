@@ -41,16 +41,16 @@ export class ChessGame {
     }
 
     // returns whether the move was successful
-    public requestMove(piece: ChessPiece, pos: Vector2): boolean {
-        if (piece.position.x == pos.x && piece.position.y == pos.y) return false;
-        if (pos.x < 1 || pos.y < 1 || pos.x > 8 || pos.y > 8) return false;
-        if (this.currentMove.current < this.moves.length) return false;
+    public requestMove(piece: ChessPiece, pos: Vector2): "fail" | "success" | "capture" {
+        if (piece.position.x == pos.x && piece.position.y == pos.y) return "fail";
+        if (pos.x < 1 || pos.y < 1 || pos.x > 8 || pos.y > 8) return "fail";
+        if (this.currentMove.current < this.moves.length) return "fail";
 
         // Other rules which I'm lazy to do well
-        if ((this.whiteTurn.current && piece.color != "white") || (!this.whiteTurn.current && piece.color != "black")) return false;
+        if ((this.whiteTurn.current && piece.color != "white") || (!this.whiteTurn.current && piece.color != "black")) return "fail";
 
         const capture = this.pieces.find((p) => p.position.x == pos.x && p.position.y == pos.y);
-        if (capture && capture.color == piece.color) return false;
+        if (capture && capture.color == piece.color) return "fail";
 
         // this.pieces = this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y);
         // this.setPieces(this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y));
@@ -58,7 +58,7 @@ export class ChessGame {
         this.move(piece, pos);
         // this.updatePieces();
         
-        return true;
+        return capture ? "capture" : "success";
     }
 
     public generatePieces() {

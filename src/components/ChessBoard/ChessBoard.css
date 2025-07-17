@@ -11,14 +11,30 @@
 }
 
 .chess_square {
-    display: flex;
+    /* display: flex;
     flex-direction: column-reverse;
     justify-content: space-between;
-    align-items: flex-start;
-    padding: 5%;
+    align-items: flex-start; */
+    position: relative;
+    /* padding: 5%; */
     font-weight: 900;
     font-style: italic;
     font-size: calc(0.025 * var(--board_size));
+}
+
+.chess_square > div {
+    position: absolute;
+    padding: 5%;
+}
+
+.chess_square > .chess_square_letter {
+    bottom: 0;
+    right: 0;
+}
+
+.chess_square > .chess_square_number {
+    top: 0;
+    left: 0;
 }
 
 .chess_square_black {
@@ -29,6 +45,14 @@
 .chess_square_white {
     background: #FBDB93;
     color: #8A2D3B;
+}
+
+.chess_square_black.chess_square_last_move {
+    background: #b6b454;
+}
+
+.chess_square_white.chess_square_last_move {
+    background: #e0df7d;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -60,6 +84,6 @@
     width: 12.5%;
     position: absolute;
 
-    border: calc(0.008 * var(--board_size)) solid rgb(143, 143, 143);
+    border: calc(0.008 * var(--board_size)) solid rgb(190, 190, 190);
     box-sizing: border-box;
 }

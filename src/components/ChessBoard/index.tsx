@@ -9,9 +9,16 @@ import type { ChessPiece } from "../../ChessPiece";
 import ChesspieceComponent from "./ChessPieceComponent";
 import { ChessBoardContext } from "../../contexts/chess_board_context";
 
+import moveSound from "../../assets/sounds/move.mp3";
+import captureSound from "../../assets/sounds/capture.mp3";
+
 export default function ChessBoard({ game, playingAsWhite, debug }: { game: ChessGame, playingAsWhite: boolean, debug?: boolean }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
+    const shouldAllowTargetSquare = React.useRef(false);
+
+    const moveSoundAudio = new Audio(moveSound);
+    const captureSoundAudio = new Audio(captureSound);
 
     React.useEffect(() => {
         game.generatePieces();
@@ -33,8 +40,12 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
         for (let i = 0; i < 8; i++) {
             for (let j = 0; j < 8; j++) {
                 const screenPos = vec2(j, i);
-                const chessPos = vec2ToChessNotation(screenPosToGamePos(screenPos));
-                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} screenPos={screenPos} debug={debug} />)
+                const gamePos = screenPosToGamePos(screenPos)
+                const chessPos = vec2ToChessNotation(gamePos);
+                const lastMove = game.moves.length > 0
+                && ((gamePos.x == game.moves[game.moves.length - 1].from.x && gamePos.y == game.moves[game.moves.length - 1].from.y)
+                || (gamePos.x == game.moves[game.moves.length - 1].to.x && gamePos.y == game.moves[game.moves.length - 1].to.y));
+                result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} lastMove={lastMove} screenPos={screenPos} debug={debug} />)
             }
         }
 
@@ -80,8 +91,15 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
         hideTargetSquare();
     }
 
+    function allowTargetSquare(allow: boolean) {
+        shouldAllowTargetSquare.current = allow;
+        if (!allow)
+            hideTargetSquare();
+    }
+
     function showTargetSquare() {
-        targetSquareRef.current?.style.setProperty("visibility", "visible");
+        if (shouldAllowTargetSquare.current)
+            targetSquareRef.current?.style.setProperty("visibility", "visible");
     }
 
     function moveTargetSquare(pos: Vector2) {
@@ -90,6 +108,14 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
 
     function hideTargetSquare() {
         targetSquareRef.current?.style.setProperty("visibility", "hidden");
+    }
+
+    function playMoveSound() {
+        moveSoundAudio.play();
+    }
+
+    function playCaptureSound() {
+        captureSoundAudio.play();
     }
     
     return <div ref={ref} className="chess_board" onMouseEnter={handleOnMouseEnter} onMouseLeave={handleOnMouseLeave} onMouseMove={handleMouseMove} onTouchStart={handleOnMouseEnter} onTouchEnd={handleOnMouseLeave} onTouchMove={handleMouseMove}>
@@ -101,6 +127,9 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
             gamePosToScreenPos,
             getBoundingClientRect: () => ref.current?.getBoundingClientRect() as DOMRect,
             playingAsWhite,
+            allowTargetSquare,
+            playMoveSound,
+            playCaptureSound,
         }}>
             {getChessPieces()}
         </ChessBoardContext.Provider>
