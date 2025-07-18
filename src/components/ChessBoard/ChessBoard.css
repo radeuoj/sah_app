@@ -49,10 +49,12 @@
 
 .chess_square_black.chess_square_last_move {
     background: #b6b454;
+    color: #e0df7d;
 }
 
 .chess_square_white.chess_square_last_move {
     background: #e0df7d;
+    color: #b6b454;
 }
 
 @media (prefers-color-scheme: dark) {

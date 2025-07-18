@@ -1,10 +1,10 @@
 import React from "react";
-import type { ChessGameC } from "../../ChessGame";
+import type { ChessGame } from "../../ChessGame";
 import type { ChessPiece } from "../../ChessPiece";
 import { useChessBoardContext } from "../../contexts/chess_board_context";
 import { vec2, type Vector2 } from "../../Vector";
 
-export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGameC }) {
+export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGame }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
     const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect, playingAsWhite, allowTargetSquare, playMoveSound, playCaptureSound, setSelectedPiece } = useChessBoardContext();
@@ -13,17 +13,6 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     React.useEffect(() => {
         goToCurrentGamePosition();
     }, [playingAsWhite, piece.position]);
-
-    React.useEffect(() => {
-        if (game.moves.length <= 0)
-            return;
-
-        if (game.moves[game.currentMove.current - (game.currentMove.current > game.previousCurrentMove.current ? 1 : 0)].capture == null) {
-            playMoveSound();
-        } else {
-            playCaptureSound();
-        }
-    }, [game.currentMove.current, game.previousCurrentMove.current]);
 
     const imageSrc = `./assets/chess_pieces/${piece.type}-${piece.color == "white" ? "w" : "b"}.svg`;
 
@@ -39,7 +28,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
             document.removeEventListener("mouseup", handleMouseUp);
             document.removeEventListener("touchend", handleMouseUp);
         };
-    }, [playingAsWhite]);
+    }, [playingAsWhite, game.pieces, game.moves]);
 
     function updateScreenPos(pos: Vector2) {
         screenPos.current = pos;
@@ -71,8 +60,9 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
     }
 
     function handleMouseDown() {
-        if (game.currentMove.current != game.moves.length) return;
-        if ((game.whiteTurn.current && piece.color != "white") || (!game.whiteTurn.current && piece.color != "black")) return;
+        // if (game.currentMove.current != game.moves.length) return;
+        
+        if ((game.isWhiteTurn() && piece.color != "white") || (!game.isWhiteTurn() && piece.color != "black")) return;
 
         allowTargetSquare(true);
         setSelectedPiece(piece);
@@ -85,9 +75,7 @@ export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece
 
         const gamePos = screenPosToGamePos(vec2(Math.floor(screenPos.current.x + 0.5), Math.floor(screenPos.current.y + 0.5)));
 
-        const move = game.suggestMoves(piece, game.pieces, game.moves).find((m) => m.to.x == gamePos.x && m.to.y == gamePos.y);
-
-        if (move) game.addMove(move);
+        game.requestMove(piece, gamePos);
         // const success = game.requestMove(piece, gamePos);
 
         // if (success == "success") {

@@ -1,5 +1,5 @@
 import React from "react";
-import { ChessGameC } from "../../ChessGame";
+import { useChessGame, type ChessGame } from "../../ChessGame";
 import { vec2, vec2ToChessNotation, type Vector2 } from "../../Vector";
 
 import "./ChessBoard.css";
@@ -11,8 +11,9 @@ import { ChessBoardContext } from "../../contexts/chess_board_context";
 
 import moveSound from "../../assets/sounds/move.mp3";
 import captureSound from "../../assets/sounds/capture.mp3";
+import type { ChessMove } from "../../ChessMove";
 
-export default function ChessBoard({ game, playingAsWhite, debug }: { game: ChessGameC, playingAsWhite: boolean, debug?: boolean }) {
+export default function ChessBoard({ game, lastMoveThatHappened, playingAsWhite, debug }: { game: ChessGame, lastMoveThatHappened: ChessMove | null, playingAsWhite: boolean, debug?: boolean }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
     const shouldAllowTargetSquare = React.useRef(false);
@@ -25,9 +26,20 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
         game.generatePieces();
     }, []);
 
+    // React.useEffect(() => {
+    //     console.log(game.isBoardInCheck(game.pieces, game.moves));
+    // }, [game.pieces]);
+    
     React.useEffect(() => {
-        console.log(game.isBoardInCheck(game.pieces, game.moves));
-    }, [game.pieces]);
+        if (lastMoveThatHappened == null)
+            return;
+
+        if (lastMoveThatHappened.capture == null) {
+            playMoveSound();
+        } else {
+            playCaptureSound();
+        }
+    }, [lastMoveThatHappened]);
 
     function screenPosToGamePos(pos: Vector2): Vector2 {
         if (playingAsWhite) return { x: pos.x + 1, y: 8 - pos.y };
@@ -47,9 +59,9 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
                 const screenPos = vec2(j, i);
                 const gamePos = screenPosToGamePos(screenPos)
                 const chessPos = vec2ToChessNotation(gamePos);
-                const lastMove = game.currentMove.current > 0
-                && ((gamePos.x == game.moves[game.currentMove.current - 1].from.x && gamePos.y == game.moves[game.currentMove.current - 1].from.y)
-                || (gamePos.x == game.moves[game.currentMove.current - 1].to.x && gamePos.y == game.moves[game.currentMove.current - 1].to.y))
+                const lastMove = game.moves.length > 0
+                && ((gamePos.x == game.getLastMove().from.x && gamePos.y == game.getLastMove().from.y)
+                || (gamePos.x == game.getLastMove().to.x && gamePos.y == game.getLastMove().to.y))
                 || (selectedPiece != null && gamePos.x == selectedPiece.position.x && gamePos.y == selectedPiece.position.y);
                 result.push(<ChessSquare key={`square_${chessPos}`} color={i % 2 == j % 2 ? "white" : "black"} chessPos={chessPos} playingAsWhite={playingAsWhite} lastMove={lastMove} screenPos={screenPos} debug={debug} />)
             }
@@ -66,15 +78,14 @@ export default function ChessBoard({ game, playingAsWhite, debug }: { game: Ches
         if (selectedPiece == null) 
             return [];
 
-        return game.suggestMoves(selectedPiece, game.pieces, game.moves).map((s, i) => {
+        return game.suggestMoves(selectedPiece).map((s, i) => {
             const gamePos = s.to;
             const screenPos = gamePosToScreenPos(gamePos);
-            const hasPiece = game.pieces.find((p) => p.position.x == gamePos.x && p.position.y == gamePos.y) != undefined;
             return (
                 <div className="move_suggestion" key={i} style={{
                     translate: `${screenPos.x * 100}% ${screenPos.y * 100}%`,
                 }}>
-                    <div className={hasPiece ? "big_circle" : "small_circle"} />
+                    <div className={s.capture ? "big_circle" : "small_circle"} />
                 </div>
             );
         });
