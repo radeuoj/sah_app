@@ -1,3 +1,4 @@
+import type { ChessMove } from "./ChessMove";
 import { vec2ToChessNotation, type Vector2 } from "./Vector";
 
 export type ChessPieceColor = "white" | "black";
@@ -25,6 +26,7 @@ export interface ChessPiece {
     type: ChessPieceType,
     color: ChessPieceColor,
     position: Vector2,
+    suggestions: ChessMove[],
 }
 
 export function makeChessPiece(type: ChessPieceType, color: ChessPieceColor, position: Vector2): ChessPiece {
@@ -33,6 +35,7 @@ export function makeChessPiece(type: ChessPieceType, color: ChessPieceColor, pos
         type,
         color,
         position,
+        suggestions: [],
     };
 }
 

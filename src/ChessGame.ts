@@ -11,7 +11,6 @@ export type ChessGame = {
     requestMove(piece: ChessPiece, pos: Vector2): boolean,
     requestUnmove(): ChessMove,
     generatePieces(): void,
-    suggestMoves(piece: ChessPiece): ChessMove[],
     isBoardInCheck(pieces: ChessPiece[], moves: ChessMove[]): null | "white" | "black" | "both",
 }
 
@@ -31,14 +30,16 @@ export function useChessGame(): ChessGame {
     }
     
     function requestMove(piece: ChessPiece, pos: Vector2): boolean {
-        const nextMove = suggestMovesUnsafe(piece, pieces, moves).find((m) => m.to.x == pos.x && m.to.y == pos.y);
-        if (nextMove)
-            move(nextMove, pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb));
+        const nextMove = piece.suggestions.find((m) => m.to.x == pos.x && m.to.y == pos.y);
+        if (nextMove && move(nextMove, pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb)))
+            generateMoveSuggestions(pieces, moves);
         return nextMove != undefined;
     }
 
     function requestUnmove(): ChessMove {
-        return unmove(pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb));
+        const lastMoev = unmove(pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb));
+        generateMoveSuggestions(pieces, moves);
+        return lastMoev;
     }
 
     function move(
@@ -153,18 +154,24 @@ export function useChessGame(): ChessGame {
         }
 
         setPieces(pieces);
+        generateMoveSuggestions(pieces, moves);
+    }
+
+    function generateMoveSuggestions(pieces: ChessPiece[], moves: ChessMove[]) {
+        for (const piece of pieces) {
+           piece.suggestions = suggestMoves(piece, pieces, moves);
+        }
     }
 
     function isMoveValid(newMove: ChessMove, pieces: ChessPiece[], moves: ChessMove[]): boolean {
-        return true;
         let newPieces = [...pieces];
         let newMoves = [...moves];
         const ok = move(newMove, newPieces, (cb) => newPieces = cb(newPieces), newMoves, (cb) => newMoves = cb(newMoves));
-        console.log(ok);
+        if (ok) unmove(newPieces, (cb) => newPieces = cb(newPieces), newMoves, (cb) => newMoves = cb(newMoves));
         return ok;
     }
 
-    function suggestMoves(piece: ChessPiece): ChessMove[] {
+    function suggestMoves(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
         return suggestMovesUnsafe(piece, pieces, moves).filter((m) => isMoveValid(m, pieces, moves));
     }
 
@@ -372,7 +379,6 @@ export function useChessGame(): ChessGame {
         requestMove,
         requestUnmove,
         generatePieces,
-        suggestMoves,
         isBoardInCheck,
     };
 }

@@ -78,7 +78,7 @@ export default function ChessBoard({ game, lastMoveThatHappened, playingAsWhite,
         if (selectedPiece == null) 
             return [];
 
-        return game.suggestMoves(selectedPiece).map((s, i) => {
+        return selectedPiece.suggestions.map((s, i) => {
             const gamePos = s.to;
             const screenPos = gamePosToScreenPos(gamePos);
             return (
