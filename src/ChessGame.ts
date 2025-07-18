@@ -30,73 +30,104 @@ export class ChessGame {
         return true;
     }
 
-    /**
-     * @deprecated
-     */
-    private move(piece: ChessPiece, pos: Vector2) {
-        const capture = this.pieces.find((p) => p.position.x == pos.x && p.position.y == pos.y);
-        this.setPieces((ps) => ps.filter((p) => p != capture));
+    // /**
+    //  * @deprecated
+    //  */
+    // private move(piece: ChessPiece, pos: Vector2) {
+    //     const capture = this.pieces.find((p) => p.position.x == pos.x && p.position.y == pos.y);
+    //     this.setPieces((ps) => ps.filter((p) => p != capture));
 
-        const from = Object.assign({}, piece.position);
-        const to = Object.assign({}, pos);
-        this.setMoves((m) => [...m, {
-            from,
-            to,
-            piece,
-            capture: capture ?? null,
-        }]);
+    //     const from = Object.assign({}, piece.position);
+    //     const to = Object.assign({}, pos);
+    //     this.setMoves((m) => [...m, {
+    //         from,
+    //         to,
+    //         piece,
+    //         capture: capture ?? null,
+    //     }]);
 
-        piece.position = pos;
-        if (capture) capture.position = vec2(0, 0);
+    //     piece.position = pos;
+    //     if (capture) capture.position = vec2(0, 0);
+
+    //     this.whiteTurn.current = !this.whiteTurn.current;
+    //     this.currentMove.current++;
+    // }
+
+    // /**
+    //  * returns whether the move was successful
+    //  * @deprecated
+    //  */
+    // public requestMove(piece: ChessPiece, pos: Vector2): "fail" | "success" | "capture" {
+    //     if (!this.isValidPosition(piece, pos, this.pieces)) return "fail";
+    //     if (this.currentMove.current < this.moves.length) return "fail";
+
+    //     // Other rules which I'm lazy to do well
+    //     if ((this.whiteTurn.current && piece.color != "white") || (!this.whiteTurn.current && piece.color != "black")) return "fail";
+
+    //     const capture = this.pieces.find((p) => p.position.x == pos.x && p.position.y == pos.y);
+    //     // this.pieces = this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y);
+    //     // this.setPieces(this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y));
+    //     // this.setPieces((ps) => ps.filter((p) => p.position.x != pos.x || p.position.y != pos.y || p == piece));
+    //     this.move(piece, pos);
+    //     // this.updatePieces();
+        
+    //     return capture ? "capture" : "success";
+    // }
+
+    public addMove(move: ChessMove) {
+        this.move(move, this.pieces, this.setPieces, this.moves, this.setMoves);
 
         this.whiteTurn.current = !this.whiteTurn.current;
         this.currentMove.current++;
     }
 
-    /**
-     * returns whether the move was successful
-     * @deprecated
-     */
-    public requestMove(piece: ChessPiece, pos: Vector2): "fail" | "success" | "capture" {
-        if (!this.isValidPosition(piece, pos, this.pieces)) return "fail";
-        if (this.currentMove.current < this.moves.length) return "fail";
+    private move(move: ChessMove, pieces: ChessPiece[], setPieces: React.Dispatch<React.SetStateAction<ChessPiece[]>>, moves: ChessMove[], setMoves: React.Dispatch<React.SetStateAction<ChessMove[]>>) {
+        setPieces((ps) => ps.filter((p) => p != move.capture));
+        setMoves((m) => [...m, move]);
 
-        // Other rules which I'm lazy to do well
-        if ((this.whiteTurn.current && piece.color != "white") || (!this.whiteTurn.current && piece.color != "black")) return "fail";
-
-        const capture = this.pieces.find((p) => p.position.x == pos.x && p.position.y == pos.y);
-        // this.pieces = this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y);
-        // this.setPieces(this.pieces.filter((p) => p.position.x != pos.x || p.position.y != pos.y));
-        // this.setPieces((ps) => ps.filter((p) => p.position.x != pos.x || p.position.y != pos.y || p == piece));
-        this.move(piece, pos);
-        // this.updatePieces();
-        
-        return capture ? "capture" : "success";
-    }
-
-    public addMove(move: ChessMove) {
-        this.setPieces((ps) => ps.filter((p) => p != move.capture));
-        this.setMoves((m) => [...m, move]);
-
-        move.piece.position = move.to;
+        move.piece.position = Object.assign({}, move.to);
         if (move.capture) move.capture.position = vec2(0, 0);
 
         if (move.castle == "king") {
-            const kingSideRook = this.pieces.find((p) => p.type == "rook" && p.position.x == 8 && p.position.y == move.piece.position.y);
+            const kingSideRook = pieces.find((p) => p.type == "rook" && p.position.x == 8 && p.position.y == move.piece.position.y);
             if (kingSideRook == undefined) 
                 throw new Error("no king side rook");
             kingSideRook.position = vec2(move.piece.position.x - 1, move.piece.position.y);
         }
 
         if (move.castle == "queen") {
-            const queenSideRook = this.pieces.find((p) => p.type == "rook" && p.position.x == 1 && p.position.y == move.piece.position.y);
+            const queenSideRook = pieces.find((p) => p.type == "rook" && p.position.x == 1 && p.position.y == move.piece.position.y);
             if (queenSideRook == undefined) 
                 throw new Error("no queen side rook");
             queenSideRook.position = vec2(move.piece.position.x + 1, move.piece.position.y);
         }
+    }
 
-        this.whiteTurn.current = !this.whiteTurn.current;
-        this.currentMove.current++;
+    private unMove(move: ChessMove, pieces: ChessPiece[], setPieces: React.Dispatch<React.SetStateAction<ChessPiece[]>>, moves: ChessMove[], setMoves: React.Dispatch<React.SetStateAction<ChessMove[]>>) {
+        setMoves((ms) => ms.filter((m) => m != move));
+
+        move.piece.position = Object.assign({}, move.from);
+
+        if (move.castle == "king") {
+            const kingSideRook = this.pieces.find((p) => p.type == "rook" && p.position.x == move.to.x - 1 && p.position.y == move.to.y);
+            if (kingSideRook == undefined) 
+                throw new Error("no king side rook backwards");
+            kingSideRook.position = vec2(8, move.from.y);
+        }
+
+        if (move.castle == "queen") {
+            const queenSideRook = this.pieces.find((p) => p.type == "rook" && p.position.x == move.to.x + 1 && p.position.y == move.to.y);
+            if (queenSideRook == undefined) 
+                throw new Error("no queen side rook backwards");
+            queenSideRook.position = vec2(1, move.from.y);
+        }
+
+        if (move.capture != null) {
+            move.capture.position = Object.assign({}, move.to);
+            this.setPieces([...this.pieces, move.capture]);
+        } else {
+            this.setPieces([...this.pieces]);
+        }
     }
 
     private generateTestPieces() {
@@ -200,16 +231,15 @@ export class ChessGame {
         }
     }
 
-    // private isMoveValid(move: ChessMove): boolean {
-    //     this.addMove(move);
-    //     const ok = this.isBoardInCheck();
-    //     this.moveBackward();
-    //     this.setMoves(this.moves.filter((_, i) => i != this.currentMove.current));
-
-    //     return ok != null;
-    // }
+    private isMoveValid(move: ChessMove, pieces: ChessPiece[], moves: ChessMove[]): boolean {
+        
+    }
 
     public suggestMoves(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
+        return this.suggestMovesUnsafe(piece, pieces, moves);
+    }
+
+    private suggestMovesUnsafe(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
         let result: ChessMove[];
         switch (piece.type) {
             case "bishop": result = this.suggestBishopMoves(piece, pieces, moves); break;
@@ -381,15 +411,7 @@ export class ChessGame {
             return null;
 
         for (const piece of pieces) {
-            let pieceMoves: ChessMove[];
-            switch (piece.type) {
-                case "bishop": pieceMoves = this.suggestBishopMoves(piece, pieces, moves); break;
-                case "king": pieceMoves = this.suggestKingMoves(piece, pieces, moves); break;
-                case "queen": pieceMoves = this.suggestQueenMoves(piece, pieces, moves); break;
-                case "rook": pieceMoves = this.suggestRookMoves(piece, pieces, moves); break;
-                case "knight": pieceMoves = this.suggestKnightMoves(piece, pieces, moves); break;
-                case "pawn": pieceMoves = this.suggestPawnMoves(piece, pieces, moves); break;
-            }
+            const pieceMoves = this.suggestMovesUnsafe(piece, pieces, moves);
 
             for (const move of pieceMoves) {
                 if (piece.color == "white" && move.to.x == blackKing.position.x && move.to.y == blackKing.position.y)
