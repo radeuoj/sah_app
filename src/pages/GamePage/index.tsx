@@ -1,12 +1,12 @@
 import React from "react";
-import { ChessGame } from "../../ChessGame";
+import { ChessGameC } from "../../ChessGame";
 import ChessBoard from "../../components/ChessBoard";
 import "./GamePage.css";
 import ChessMoves from "../../components/ChessMoves";
 
 export default function GamePage() {
     // const game = React.useRef(new ChessGame());
-    const game = new ChessGame();
+    const game = new ChessGameC();
     const [playingAsWhite, setPlayingAsWhite] = React.useState(true);
     const [debug, setDebug] = React.useState(true);
 

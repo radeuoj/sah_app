@@ -1,5 +1,5 @@
 import React from "react";
-import { ChessGame } from "../../ChessGame";
+import { ChessGameC } from "../../ChessGame";
 import { vec2, vec2ToChessNotation, type Vector2 } from "../../Vector";
 
 import "./ChessBoard.css";
@@ -12,7 +12,7 @@ import { ChessBoardContext } from "../../contexts/chess_board_context";
 import moveSound from "../../assets/sounds/move.mp3";
 import captureSound from "../../assets/sounds/capture.mp3";
 
-export default function ChessBoard({ game, playingAsWhite, debug }: { game: ChessGame, playingAsWhite: boolean, debug?: boolean }) {
+export default function ChessBoard({ game, playingAsWhite, debug }: { game: ChessGameC, playingAsWhite: boolean, debug?: boolean }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const targetSquareRef = React.useRef<HTMLDivElement | null>(null);
     const shouldAllowTargetSquare = React.useRef(false);

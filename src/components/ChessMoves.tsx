@@ -1,9 +1,9 @@
-import type { ChessGame } from "../ChessGame";
+import type { ChessGameC } from "../ChessGame";
 import type { ChessMove } from "../ChessMove";
 import { vec2 } from "../Vector";
 import ChessMoveComponent from "./ChessMoveComponent";
 
-export default function ChessMoves({ game }: { game: ChessGame }) {
+export default function ChessMoves({ game }: { game: ChessGameC }) {
     return (
         <div className="chess_moves">
             <div className="moves_container">

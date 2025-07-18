@@ -1,10 +1,10 @@
 import React from "react";
-import type { ChessGame } from "../../ChessGame";
+import type { ChessGameC } from "../../ChessGame";
 import type { ChessPiece } from "../../ChessPiece";
 import { useChessBoardContext } from "../../contexts/chess_board_context";
 import { vec2, type Vector2 } from "../../Vector";
 
-export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGame }) {
+export default function ChesspieceComponent({ piece, game }: { piece: ChessPiece, game: ChessGameC }) {
     const ref = React.useRef<HTMLDivElement | null>(null);
     const mouseDown = React.useRef(false);
     const { gamePosToScreenPos, screenPosToGamePos, getBoundingClientRect, playingAsWhite, allowTargetSquare, playMoveSound, playCaptureSound, setSelectedPiece } = useChessBoardContext();
