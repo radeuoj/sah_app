@@ -7,4 +7,5 @@ export interface ChessMove {
     piece: ChessPiece,
     capture: ChessPiece | null,
     castle?: "king" | "queen",
+    promotion?: "queen",
 }

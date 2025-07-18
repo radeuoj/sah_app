@@ -30,10 +30,11 @@ export default function GamePage() {
                 <input name="playing_as_white" id="playing_as_white" type="checkbox" checked={playingAsWhite} onChange={(e) => setPlayingAsWhite(e.target.checked)} />
                 <label htmlFor="playing_as_white">joc ca alb</label><br />
 
-                <input name="debug" id="debug" type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
-                <label htmlFor="debug">debug</label><br />
+                {/* <input name="debug" id="debug" type="checkbox" checked={debug} onChange={(e) => setDebug(e.target.checked)} />
+                <label htmlFor="debug">debug</label><br /> */}
 
                 <div>check: {game.isBoardInCheck(game.pieces, game.moves) ?? "no"}</div>
+                <div>verdict: {game.verdict}</div>
             </div>
             <div className="center">
                 <div className="top"></div>

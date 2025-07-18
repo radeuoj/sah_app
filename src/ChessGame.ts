@@ -6,6 +6,7 @@ import type { ChessMove } from "./ChessMove";
 export type ChessGame = {
     pieces: ChessPiece[],
     moves: ChessMove[],
+    verdict: "ok" | "stalemate" | "checkmate",
     isWhiteTurn(): boolean,
     getLastMove(): ChessMove,
     requestMove(piece: ChessPiece, pos: Vector2): boolean,
@@ -17,6 +18,7 @@ export type ChessGame = {
 export function useChessGame(): ChessGame {
     const [pieces, setPieces] = React.useState<ChessPiece[]>([]);
     const [moves, setMoves] = React.useState<ChessMove[]>([]);
+    const [verdict, setVerdict] = React.useState<"ok" | "stalemate" | "checkmate">("ok");
 
     function isWhiteTurn(): boolean {
         return moves.length % 2 == 0;
@@ -31,14 +33,30 @@ export function useChessGame(): ChessGame {
     
     function requestMove(piece: ChessPiece, pos: Vector2): boolean {
         const nextMove = piece.suggestions.find((m) => m.to.x == pos.x && m.to.y == pos.y);
-        if (nextMove && move(nextMove, pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb)))
-            generateMoveSuggestions(pieces, moves);
+        if (nextMove) {
+            let newPieces = [...pieces]; 
+            let newMoves = [...moves];
+
+            if (move(nextMove, newPieces, (cb) => newPieces = cb(newPieces), newMoves, (cb) => newMoves = cb(newMoves)))
+                setVerdict(generateMoveSuggestions(newPieces, newMoves));
+
+            setPieces(newPieces);
+            setMoves(newMoves);
+        }
+        
         return nextMove != undefined;
     }
 
     function requestUnmove(): ChessMove {
-        const lastMoev = unmove(pieces, (cb) => setPieces(cb), moves, (cb) => setMoves(cb));
-        generateMoveSuggestions(pieces, moves);
+        let newPieces = [...pieces];
+        let newMoves = [...moves];
+
+        const lastMoev = unmove(newPieces, (cb) => newPieces = cb(newPieces), newMoves, (cb) => newMoves = cb(newMoves));
+        setVerdict(generateMoveSuggestions(newPieces, newMoves));
+
+        setPieces(newPieces);
+        setMoves(newMoves);
+
         return lastMoev;
     }
 
@@ -55,7 +73,8 @@ export function useChessGame(): ChessGame {
         move.piece.position = Object.assign({}, move.to);
         if (move.capture) move.capture.position = vec2(0, 0);
 
-        if (move.castle) castle(move);
+        if (move.castle) castle(move, newPieces, newMoves);
+        if (move.promotion) promote(move);
 
         const check = isBoardInCheck(newPieces, newMoves);
         if (check == "both" || check == move.piece.color) {
@@ -88,12 +107,13 @@ export function useChessGame(): ChessGame {
         move.piece.position = Object.assign({}, move.from);
         if (move.capture) move.capture.position = Object.assign({}, move.to);
 
-        if (move.castle) uncastle(move);
+        if (move.castle) uncastle(move, pieces, moves);
+        if (move.promotion) unpromote(move);
 
         return move;
     }
 
-    function castle(move: ChessMove) {
+    function castle(move: ChessMove, pieces: ChessPiece[], moves: ChessMove[]) {
         if (move.castle == undefined)
             throw new Error("castle is undefined!!!");
 
@@ -103,7 +123,7 @@ export function useChessGame(): ChessGame {
         rook.position = vec2(move.piece.position.x + (move.castle == "king" ? -1 : +1), move.piece.position.y);
     }
 
-    function uncastle(move: ChessMove) {
+    function uncastle(move: ChessMove, pieces: ChessPiece[], moves: ChessMove[]) {
         if (move.castle == undefined)
             throw new Error("castle is undefined!!!");
 
@@ -113,16 +133,38 @@ export function useChessGame(): ChessGame {
         rook.position = vec2(move.castle == "king" ? 8 : 1, move.piece.position.y);
     }
 
+    function promote(move: ChessMove) {
+        if (move.promotion == undefined)
+            throw new Error("this isnt a promotion!!");
+
+        move.piece.type = move.promotion;
+    }
+
+    function unpromote(move: ChessMove) {
+        if (move.promotion == undefined)
+            throw new Error("this isnt a promotion!!");
+
+        move.piece.type = "pawn";
+    }
+
     function generateTestPieces() {
         const pieces: ChessPiece[] = [];
+
+        pieces.push(makeChessPiece("king", "black", vec2(5, 8)));
         pieces.push(makeChessPiece("king", "white", vec2(5, 1)));
+
         pieces.push(makeChessPiece("rook", "white", vec2(1, 1)));
         pieces.push(makeChessPiece("rook", "white", vec2(8, 1)));
+        pieces.push(makeChessPiece("rook", "black", vec2(1, 8)));
+        pieces.push(makeChessPiece("rook", "black", vec2(8, 8)));
+            pieces.push(makeChessPiece("pawn", "white", vec2(6, 4)));
+
         setPieces(pieces);
+        generateMoveSuggestions(pieces, moves);
     }
 
     function generatePieces() {
-        // this.generateTestPieces();
+        // generateTestPieces();
         // return;
         setPieces([]);
         const pieces: ChessPiece[] = [];
@@ -157,10 +199,18 @@ export function useChessGame(): ChessGame {
         generateMoveSuggestions(pieces, moves);
     }
 
-    function generateMoveSuggestions(pieces: ChessPiece[], moves: ChessMove[]) {
+    function generateMoveSuggestions(pieces: ChessPiece[], moves: ChessMove[]): "ok" | "stalemate" | "checkmate" {
+        let whiteMoveCount = 0, blackMoveCount = 0;
+        const check = isBoardInCheck(pieces, moves);
         for (const piece of pieces) {
-           piece.suggestions = suggestMoves(piece, pieces, moves);
+           piece.suggestions = suggestMoves(piece, check, pieces, moves);
+           if (piece.color == "white") whiteMoveCount += piece.suggestions.length;
+           else blackMoveCount += piece.suggestions.length;
         }
+
+        if ((moves.length % 2 == 0 ? whiteMoveCount : blackMoveCount) > 0) return "ok";
+        if (check) return "checkmate";
+        return "stalemate";
     }
 
     function isMoveValid(newMove: ChessMove, pieces: ChessPiece[], moves: ChessMove[]): boolean {
@@ -171,14 +221,14 @@ export function useChessGame(): ChessGame {
         return ok;
     }
 
-    function suggestMoves(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
-        return suggestMovesUnsafe(piece, pieces, moves).filter((m) => isMoveValid(m, pieces, moves));
+    function suggestMoves(piece: ChessPiece, check: null | "white" | "black" | "both", pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
+        return suggestMovesUnsafe(piece, check, pieces, moves).filter((m) => isMoveValid(m, pieces, moves));
     }
 
-    function suggestMovesUnsafe(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
+    function suggestMovesUnsafe(piece: ChessPiece, check: null | "white" | "black" | "both", pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
         switch (piece.type) {
             case "bishop": return suggestBishopMoves(piece, pieces, moves);
-            case "king": return suggestKingMoves(piece, pieces, moves);
+            case "king": return suggestKingMoves(piece, check, pieces, moves);
             case "queen": return suggestQueenMoves(piece, pieces, moves); 
             case "rook": return suggestRookMoves(piece, pieces, moves);
             case "knight": return suggestKnightMoves(piece, pieces, moves);
@@ -218,7 +268,7 @@ export function useChessGame(): ChessGame {
         return result;
     }
 
-    function suggestKingMoves(piece: ChessPiece, pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
+    function suggestKingMoves(piece: ChessPiece, check: null | "white" | "black" | "both", pieces: ChessPiece[], moves: ChessMove[]): ChessMove[] {
         const result: ChessMove[] = [];
 
         for (let i = piece.position.x - 1; i <= piece.position.x + 1; i++) {
@@ -229,7 +279,7 @@ export function useChessGame(): ChessGame {
         }
 
         // castle
-        if (moves.filter((m) => m.piece == piece).length == 0) {
+        if (moves.filter((m) => m.piece == piece).length == 0 && check != "both" && check != piece.color) {
             const kingSideRook = pieces.find((p) => p.type == "rook" && p.position.x == 8 && p.position.y == piece.position.y);
             const queenSideRook = pieces.find((p) => p.type == "rook" && p.position.x == 1 && p.position.y == piece.position.y);
 
@@ -304,16 +354,28 @@ export function useChessGame(): ChessGame {
 
         const frontPos = vec2(piece.position.x, piece.position.y + (piece.color == "white" ? +1 : -1));
         const front = pieces.find((p) => p.position.x == frontPos.x && p.position.y == frontPos.y);
-        if (!front && isValidPosition(piece, frontPos, pieces)) 
-            result.push(generateMove(piece, frontPos, pieces));
+        if (!front && isValidPosition(piece, frontPos, pieces)) {
+            const move = generateMove(piece, frontPos, pieces);
+            if (move.to.y == (piece.color == "white" ? 8 : 1))
+                move.promotion = "queen";
+            result.push(move);
+        }
 
         const frontLeft = pieces.find((p) => p.position.x == frontPos.x - 1 && p.position.y == frontPos.y);
-        if (frontLeft && frontLeft.color != piece.color)
-            result.push(generateMove(piece, vec2(frontPos.x - 1, frontPos.y), pieces));
+        if (frontLeft && frontLeft.color != piece.color) {
+            const move = generateMove(piece, vec2(frontPos.x - 1, frontPos.y), pieces);
+            if (move.to.y == (piece.color == "white" ? 8 : 1))
+                move.promotion = "queen";
+            result.push(move);
+        }
 
         const frontRight = pieces.find((p) => p.position.x == frontPos.x + 1 && p.position.y == frontPos.y);
-        if (frontRight && frontRight.color != piece.color)
-            result.push(generateMove(piece, vec2(frontPos.x + 1, frontPos.y), pieces));
+        if (frontRight && frontRight.color != piece.color){
+            const move = generateMove(piece, vec2(frontPos.x + 1, frontPos.y), pieces);
+            if (move.to.y == (piece.color == "white" ? 8 : 1))
+                move.promotion = "queen";
+            result.push(move);
+        }
 
         const doubleFrontPos = vec2(frontPos.x, frontPos.y + (piece.color == "white" ? +1 : -1));
         const doubleFront = pieces.find((p) => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
@@ -355,7 +417,7 @@ export function useChessGame(): ChessGame {
         let blackResult = false, whiteResult = false;
 
         for (const piece of pieces) {
-            const pieceMoves = suggestMovesUnsafe(piece, pieces, moves);
+            const pieceMoves = suggestMovesUnsafe(piece, null, pieces, moves);
 
             for (const move of pieceMoves) {
                 if (piece.color == "white" && move.to.x == blackKing.position.x && move.to.y == blackKing.position.y)
@@ -374,6 +436,7 @@ export function useChessGame(): ChessGame {
     return {
         pieces,
         moves,
+        verdict,
         isWhiteTurn,
         getLastMove,
         requestMove,
