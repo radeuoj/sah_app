@@ -8,4 +8,5 @@ export interface ChessMove {
     capture: ChessPiece | null,
     castle?: "king" | "queen",
     promotion?: "queen",
+    enPassant?: Vector2,
 }
