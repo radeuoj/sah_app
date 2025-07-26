@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useChessGame } from '@/chess';
+import { vec2ToChessNotation, type Piece } from '@/chess/types';
 import ChessBoard from '@/components/ChessBoard.vue';
 import { ref } from 'vue';
 

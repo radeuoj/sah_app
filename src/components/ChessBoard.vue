@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { makePiece, vec2, type Color, type Piece, type Vector2 } from '@/chess/types';
-import ChessSquare, { type ChessSquareData } from './ChessSquare.vue';
 import ChessPiece from './ChessPiece.vue';
-import { ref, watch, watchEffect } from 'vue';
+import { onMounted, onUnmounted, ref, useTemplateRef, watch, watchEffect, type ShallowRef } from 'vue';
 import { useChessGame } from '@/chess';
 
 const props = defineProps<{
@@ -11,8 +10,10 @@ const props = defineProps<{
   fen: string,
 }>();
 
+const selectedPiece = ref<Piece | null>(null);
+const boardRef = useTemplateRef("board") as Readonly<ShallowRef<HTMLDivElement>>;
+
 watch(() => props.fen, () => {
-  console.log("bruh")
   if (props.game.isFenValid(props.fen))
     props.game.loadFen(props.fen);
   else if (props.fen == "")
@@ -31,24 +32,14 @@ function gamePosToScreenPos(pos: Vector2): Vector2 {
   else return vec2(8 - pos.x, pos.y - 1);
 }
 
-function generateSquaresArray(): ChessSquareData[] {
-  const result: ChessSquareData[] = [];
-
-  for (let i = 0; i < 8; i++) {
-    for (let j = 0; j < 8; j++) {
-      result.push({
-        color: i % 2 == j % 2 ? "white" : "black",
-        position: screenPosToGamePos(vec2(j, i)),
-      })
-    }
-  }
-
-  return result;
+function handlePieceUnselect(piece: Piece, newPos: Vector2) {
+  selectedPiece.value = null;
+  piece.position = newPos;
 }
 </script>
 
 <template>
-  <div class="board">
+  <div ref="board" class="board">
     <!-- Square info -->
     <div class="files">
       <div class="square" :class="i % 2 == 0 ? 'black' : 'white'" v-for="i in Array(8).keys()">
@@ -62,7 +53,7 @@ function generateSquaresArray(): ChessSquareData[] {
     </div>
 
     <!-- Pieces -->
-    <ChessPiece v-for="piece in game.pieces.value" :piece :screen-pos-to-game-pos="screenPosToGamePos" :game-pos-to-screen-pos="gamePosToScreenPos" />
+    <ChessPiece v-for="piece in game.pieces.value" :piece @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" :screen-pos-to-game-pos="screenPosToGamePos" :game-pos-to-screen-pos="gamePosToScreenPos" :get-bounding-client-rect="() => boardRef.getBoundingClientRect()" />
   </div>
 </template>
 
@@ -70,7 +61,7 @@ function generateSquaresArray(): ChessSquareData[] {
 .board {
   width: var(--chess-board-size);
   height: var(--chess-board-size);
-  background-image: url(/public/assets/chess_board.png);
+  background-image: url(/assets/chess_board.png);
   background-size: 100%;
   image-rendering: pixelated;
   

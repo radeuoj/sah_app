@@ -66,3 +66,7 @@ export function letterToPieceType(letter: string): PieceType {
 export function isChessLetter(letter: string): boolean {
   return "kKqQrRnNbBpP".indexOf(letter) > -1;
 }
+
+export function vec2ToChessNotation(vec: Vector2): string {
+    return "0abcdefgh"[vec.x] + vec.y.toString();
+}
