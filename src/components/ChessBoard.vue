@@ -14,10 +14,7 @@ const selectedPiece = ref<Piece | null>(null);
 const boardRef = useTemplateRef("board") as Readonly<ShallowRef<HTMLDivElement>>;
 
 watch(() => props.fen, () => {
-  if (props.game.isFenValid(props.fen))
-    props.game.loadFen(props.fen);
-  else if (props.fen == "")
-    props.game.loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  props.game.loadFen(props.fen);
 }, {
   immediate: true,
 });
@@ -61,9 +58,8 @@ function handlePieceUnselect(piece: Piece, newPos: Vector2) {
 .board {
   width: var(--chess-board-size);
   height: var(--chess-board-size);
-  background-image: url(/assets/chess_board.png);
+  background-image: url(/assets/chess_board_big.png); /* magick chess_board.png -filter box -resize 2048x2048 chess_board_big.png */
   background-size: 100%;
-  image-rendering: pixelated;
   
   position: relative;
   display: grid;

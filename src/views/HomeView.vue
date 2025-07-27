@@ -2,12 +2,11 @@
 import { useChessGame } from '@/chess';
 import { vec2ToChessNotation, type Piece } from '@/chess/types';
 import ChessBoard from '@/components/ChessBoard.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const playingAsWhite = ref(true);
-const fen = ref("");
+const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 const game = useChessGame();
-// game.loadFen("rnb1kbnr/ppp1pppp/3q4/3P4/8/5N2/PPPP1PPP/RNBQKB1R b KQkq - 2 3");
 </script>
 
 <template>

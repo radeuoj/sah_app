@@ -17,7 +17,7 @@ const emit = defineEmits<{
 const mouse_down = ref(false);
 const screen_pos = ref(props.gamePosToScreenPos(props.piece.position));
 
-watch([() => props.piece.position.x, () => props.piece.position.y], () => {
+watch(() => props.piece.position, () => {
   screen_pos.value = props.gamePosToScreenPos(props.piece.position);
 })
 
@@ -41,10 +41,13 @@ function handleMouseUp() {
 
   mouse_down.value = false;
   const gamePos = props.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
+  
   emit('unselect', gamePos);
 }
 
 function handleMouseMove(event: MouseEvent) {
+  if (!mouse_down.value) return;
+
   const rect = props.getBoundingClientRect();
   const x = (event.clientX - rect.x) / rect.width * 8;
   const y = (event.clientY - rect.y) / rect.height * 8;
@@ -53,8 +56,6 @@ function handleMouseMove(event: MouseEvent) {
 }
 
 function handleMovePiece(pos: Vector2) {
-  if (!mouse_down.value) return;
-
   screen_pos.value = vec2(pos.x - 0.5, pos.y - 0.5);
 }
 </script>
