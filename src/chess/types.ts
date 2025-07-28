@@ -70,3 +70,13 @@ export function isChessLetter(letter: string): boolean {
 export function vec2ToChessNotation(vec: Vector2): string {
     return "0abcdefgh"[vec.x] + vec.y.toString();
 }
+
+export type Move = {
+  piece: Piece,
+  to: Vector2,
+  from: Vector2,
+  capture: Piece | null,
+  castle: "king" | "queen" | null,
+  promotion: "queen" | "rook" | "bishop" | "knight" | null,
+  en_passant: Vector2 | null,
+}

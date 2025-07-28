@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { vec2, type Piece, type Vector2 } from '@/chess/types';
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import useChessBoardContext from '@/tools/use_chess_board_context';
+import useWindowEvent from '@/tools/use_window_event';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
   piece: Piece,
-  gamePosToScreenPos(pos: Vector2): Vector2,
-  screenPosToGamePos(pos: Vector2): Vector2,
-  getBoundingClientRect(): DOMRect,
 }>();
+
+const board = useChessBoardContext();
 
 const emit = defineEmits<{
   select: [],
@@ -15,21 +16,14 @@ const emit = defineEmits<{
 }>();
 
 const mouse_down = ref(false);
-const screen_pos = ref(props.gamePosToScreenPos(props.piece.position));
+const screen_pos = ref(board.gamePosToScreenPos(props.piece.position));
 
-watch(() => props.piece.position, () => {
-  screen_pos.value = props.gamePosToScreenPos(props.piece.position);
+watch([() => props.piece.position, board.getSide], () => {
+  screen_pos.value = board.gamePosToScreenPos(props.piece.position);
 })
 
-onMounted(() => {
-  window.addEventListener("mouseup", handleMouseUp);
-  window.addEventListener("mousemove", handleMouseMove);
-});
-
-onUnmounted(() => {
-  window.removeEventListener("mouseup", handleMouseUp);
-  window.removeEventListener("mousemove", handleMouseMove);
-});
+useWindowEvent("mouseup", handleMouseUp);
+useWindowEvent("mousemove", handleMouseMove);
 
 function handleMouseDown() {
   mouse_down.value = true;
@@ -40,28 +34,26 @@ function handleMouseUp() {
   if (!mouse_down.value) return;
 
   mouse_down.value = false;
-  const gamePos = props.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
-  
+  const gamePos = board.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
+  screen_pos.value = board.gamePosToScreenPos(props.piece.position);
   emit('unselect', gamePos);
 }
 
 function handleMouseMove(event: MouseEvent) {
   if (!mouse_down.value) return;
 
-  const rect = props.getBoundingClientRect();
+  const rect = board.getBoundingClientRect();
   const x = (event.clientX - rect.x) / rect.width * 8;
   const y = (event.clientY - rect.y) / rect.height * 8;
 
-  handleMovePiece(vec2(x, y));
-}
-
-function handleMovePiece(pos: Vector2) {
-  screen_pos.value = vec2(pos.x - 0.5, pos.y - 0.5);
+  screen_pos.value = vec2(x - 0.5, y - 0.5);
 }
 </script>
 
 <template>
-  <div class="piece" :class="props.piece.color, props.piece.type" @mousedown="handleMouseDown" :style="{
+  <div class="piece" :class="props.piece.color, props.piece.type, {
+    selected: mouse_down,
+  }" @mousedown="handleMouseDown" :style="{
     translate: `${screen_pos.x * 100}% ${screen_pos.y * 100}%`,
   }"></div>
 </template>
@@ -74,6 +66,10 @@ function handleMovePiece(pos: Vector2) {
   position: absolute;
   width: 12.5%;
   height: 12.5%;
+}
+
+.selected {
+  z-index: 2;
 }
 
 .black.king {
