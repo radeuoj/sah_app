@@ -2,11 +2,13 @@
 import { useChessGame } from '@/chess';
 import type { Color } from '@/chess/types';
 import ChessBoard from '@/components/ChessBoard.vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const side = ref<Color>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 const game = useChessGame();
+
+// const check = computed(() => game.isBoardInCheck())
 </script>
 
 <template>
@@ -24,6 +26,7 @@ const game = useChessGame();
         <input id="fen" v-model="fen" />
       </div>
       <div>current turn: {{ game.turn }}</div>
+      <!-- <div>check: {{ check ?? 'null' }}</div> -->
     </div>
     <div class="center">
       <ChessBoard :game :side :fen />
