@@ -1,23 +1,29 @@
-import { isProxy, ref, toRaw, type Ref } from "vue";
+import { isProxy, ref, shallowRef, toRaw } from "vue";
 import { isChessLetter, letterToPieceType, makePiece, vec2, type Color, type Piece, type Vector2, type Move } from "./types";
 
-export function useChessGame() {
-  // const pieces = ref<Piece[]>([]);
-  // const moves = ref<Move[]>([]);
-  const screenPieces = ref<Piece[]>([]);
-  const suggestions = ref<Move[]>([]);
-  const turn = ref<Color>("white");
+export class ChessGame {
+  private pieces: Piece[];
+  private moves: Move[];
+  private suggestions: Move[];
+  private turn: Color;
 
-  const data = {
-    pieces: Array<Piece>(),
-    moves: Array<Move>(),
-  };
+  private onMoveCallback: (pieces: Piece[], moves: Move[], suggestions: Move[], turn: Color) => void;
 
-  function updateScreen() {
-    screenPieces.value = [...data.pieces];
+  public constructor(onMoveCallback: (pieces: Piece[], moves: Move[], suggestions: Move[], turn: Color) => void) {
+    this.pieces = [];
+    this.moves = [];
+    this.suggestions = [];
+    this.turn = "white";
+    this.onMoveCallback = onMoveCallback;
+    
+    this.updateScreen();
   }
 
-  function loadFen(fen: string): boolean {
+  private updateScreen() {
+    this.onMoveCallback([...this.pieces], [...this.moves], [...this.suggestions], this.turn);
+  }
+
+  public loadFen(fen: string): boolean {
     const new_pieces: Piece[] = [];
 
     let x = 1, y = 1, i = 0;
@@ -41,114 +47,115 @@ export function useChessGame() {
       i++;
     }
 
-    data.pieces = new_pieces;
-    updateScreen();
-    suggestMoves();
+    this.pieces = new_pieces;
+    this.suggestMoves();
+    this.updateScreen();
     return true;
   }
 
-  function nextTurn() {
-    turn.value = turn.value == "white" ? "black" : "white";
+  private nextTurn() {
+    this.turn = this.turn == "white" ? "black" : "white";
   }
 
-  function requestMove(piece: Piece, pos: Vector2): boolean {
-    const nextMove = suggestions.value.find(m => m.piece == piece && m.to.x == pos.x && m.to.y == pos.y);
+  public requestMove(piece: Piece, pos: Vector2): boolean {
+    const nextMove = this.suggestions.find(m => m.piece == piece && m.to.x == pos.x && m.to.y == pos.y);
+    console.log(this.suggestions)
     if (!nextMove) return false;
 
-    move(nextMove);
-    updateScreen();
-    suggestMoves();
+    this.move(nextMove);
+    this.suggestMoves();
+    this.updateScreen();
 
     return true;
   }
 
-  function requestUnmove(): Move {
-    const lastMove = unmove();
-    updateScreen();
-    suggestMoves();
+  public requestUnmove(): Move {
+    const lastMove = this.unmove();
+    this.suggestMoves();
+    this.updateScreen();
 
     return lastMove;
   }
 
-  function move(move: Move): boolean {
-    data.pieces = data.pieces.filter(p => toRaw(p) != toRaw(move.capture));
-    data.moves.push(toRaw(move));
+  private move(move: Move): boolean {
+    this.pieces = this.pieces.filter(p => p != move.capture);
+    this.moves.push(move);
 
     move.piece.position = {...move.to};
     if (move.capture) move.capture.position = vec2(0, 0);
 
-    if (move.castle) castle(move);
-    if (move.promotion) promote(move);
+    if (move.castle) this.castle(move);
+    if (move.promotion) this.promote(move);
 
-    nextTurn();
-    if (isInCheck(move.piece.color)) {
-      unmove();
+    this.nextTurn();
+    if (this.isInCheck(move.piece.color)) {
+      this.unmove();
       return false;
     }
 
     return true;
   }
 
-  function unmove(): Move {
-    if (data.moves.length <= 0)
+  private unmove(): Move {
+    if (this.moves.length <= 0)
       throw new Error("No moves!!");
 
-    const lastMove = data.moves[data.moves.length - 1];
-    data.moves = data.moves.filter(m => toRaw(m) != toRaw(lastMove));
+    const lastMove = this.moves[this.moves.length - 1];
+    this.moves = this.moves.filter(m => m != lastMove);
 
     lastMove.piece.position = {...lastMove.from};
     if (lastMove.capture) {
-      data.pieces.push(toRaw(lastMove.capture));
+      this.pieces.push(lastMove.capture);
       lastMove.capture.position = {...lastMove.to};
     }
 
-    if (lastMove.castle) uncastle(lastMove);
-    if (lastMove.promotion) unpromote(lastMove);
+    if (lastMove.castle) this.uncastle(lastMove);
+    if (lastMove.promotion) this.unpromote(lastMove);
     if (lastMove.en_passant && lastMove.capture) lastMove.capture.position = {...lastMove.en_passant};
 
-    nextTurn();
+    this.nextTurn();
 
     return lastMove;
   }
 
-  function castle(move: Move) {
+  private castle(move: Move) {
     if (move.castle == null)
       throw new Error("castle is null!!!");
 
-    const rook = data.pieces.find(p => p.type == "rook" && p.position.x == (move.castle == "king" ? 8 : 1) && p.position.y == move.piece.position.y);
+    const rook = this.pieces.find(p => p.type == "rook" && p.position.x == (move.castle == "king" ? 8 : 1) && p.position.y == move.piece.position.y);
     if (rook == undefined)
       throw new Error(`no ${move.castle} side rook`);
 
     rook.position = vec2(move.piece.position.x + (move.castle == "king" ? -1 : +1), move.piece.position.y);
   }
 
-  function uncastle(move: Move) {
+  private uncastle(move: Move) {
     if (move.castle == null)
       throw new Error("castle is null!!!");
 
-    const rook = data.pieces.find(p => p.type == "rook" && p.position.x == move.to.x + (move.castle == "king" ? -1 : +1) && p.position.y == move.to.y);
+    const rook = this.pieces.find(p => p.type == "rook" && p.position.x == move.to.x + (move.castle == "king" ? -1 : +1) && p.position.y == move.to.y);
     if (rook == undefined)
       throw new Error(`no ${move.castle} side rook`);
 
     rook.position = vec2(move.castle == "king" ? 8 : 1, move.piece.position.y);
   }
 
-  function promote(move: Move) {
+  private promote(move: Move) {
     if (move.promotion == null)
       throw new Error("this isnt a promotion!!");
 
     move.piece.type = move.promotion;
   }
 
-  function unpromote(move: Move) {
+  private unpromote(move: Move) {
     if (move.promotion == null)
       throw new Error("this isnt a promotion!!");
 
     move.piece.type = "pawn";
   }
 
-  function makeMove(piece: Piece, position: Vector2, castle?: Move["castle"], promotion?: Move["promotion"], en_passant?: Move["en_passant"]): Move {
-    const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y);
+  private makeMove(piece: Piece, position: Vector2, castle?: Move["castle"], promotion?: Move["promotion"], en_passant?: Move["en_passant"]): Move {
+    const capture = this.pieces.find((p) => p.position.x == position.x && p.position.y == position.y);
     return {
       piece,
       to: {...position},
@@ -160,171 +167,171 @@ export function useChessGame() {
     }
   }
 
-  function isPositionValid(piece: Piece, position: Vector2): boolean {
+  private isPositionValid(piece: Piece, position: Vector2): boolean {
     if (piece.position.x == position.x && piece.position.y == position.y) return false;
     if (piece.position.x == position.x && piece.position.y == position.y) return false;
     if (position.x < 1 || position.y < 1 || position.x > 8 || position.y > 8) return false;
-    const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y && p.color == piece.color);
+    const capture = this.pieces.find((p) => p.position.x == position.x && p.position.y == position.y && p.color == piece.color);
     if (capture) return false;
     return true;
   }
 
-  function progressPosition(piece: Piece, step: Vector2): Vector2[] {
+  private progressPosition(piece: Piece, step: Vector2): Vector2[] {
     const result: Vector2[] = [];
 
-    for (let i = piece.position.x + step.x, j = piece.position.y + step.y; isPositionValid(piece, vec2(i, j)); i += step.x, j += step.y) {
+    for (let i = piece.position.x + step.x, j = piece.position.y + step.y; this.isPositionValid(piece, vec2(i, j)); i += step.x, j += step.y) {
       result.push(vec2(i, j));
-      if (data.pieces.find(p => p.position.x == i && p.position.y == j))
+      if (this.pieces.find(p => p.position.x == i && p.position.y == j))
         break;
     }
 
     return result;
   }
 
-  function isMoveValid(newMove: Move): boolean {
-    const ok = move(newMove);
-    if (ok) unmove();
+  private isMoveValid(newMove: Move): boolean {
+    const ok = this.move(newMove);
+    if (ok) this.unmove();
     return ok;
   }
 
-  function suggestMoves() {
-    suggestions.value = suggestMovesUnsafe()
-    .filter(m => m.piece.color == turn.value && isMoveValid(m))
-    .filter(m => m.castle == null || !isInCheck(m.piece.color))
+  private suggestMoves() {
+    this.suggestions = this.suggestMovesUnsafe()
+    .filter(m => m.piece.color == this.turn && this.isMoveValid(m))
+    .filter(m => m.castle == null || !this.isInCheck(m.piece.color))
     .filter(m => m.castle != "king" 
-      || (!isSquareAttacked(vec2(m.piece.position.x + 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
-      && !isSquareAttacked(vec2(m.piece.position.x + 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")))
+      || (!this.isSquareAttacked(vec2(m.piece.position.x + 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+      && !this.isSquareAttacked(vec2(m.piece.position.x + 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")))
     .filter(m => m.castle != "queen" 
-      || (!isSquareAttacked(vec2(m.piece.position.x - 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
-      && !isSquareAttacked(vec2(m.piece.position.x - 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")));
+      || (!this.isSquareAttacked(vec2(m.piece.position.x - 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+      && !this.isSquareAttacked(vec2(m.piece.position.x - 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")));
   }
 
-  function suggestMovesUnsafe(): Move[] {
+  private suggestMovesUnsafe(): Move[] {
     const result: Move[] = [];
-    for (const piece of data.pieces) {
-      result.push(...suggestPieceMoves(piece));
+    for (const piece of this.pieces) {
+      result.push(...this.suggestPieceMoves(piece));
     }
     return result;
   }
 
-  function suggestPieceMoves(piece: Piece): Move[] {
+  private suggestPieceMoves(piece: Piece): Move[] {
     switch (piece.type) {
-      case "king": return suggestKingMoves(piece);
-      case "queen": return suggestQueenMoves(piece);
-      case "rook": return suggestRookMoves(piece);
-      case "knight": return suggestKnightMoves(piece);
-      case "bishop": return suggestBishopMoves(piece);
-      case "pawn": return suggestPawnMoves(piece);
+      case "king": return this.suggestKingMoves(piece);
+      case "queen": return this.suggestQueenMoves(piece);
+      case "rook": return this.suggestRookMoves(piece);
+      case "knight": return this.suggestKnightMoves(piece);
+      case "bishop": return this.suggestBishopMoves(piece);
+      case "pawn": return this.suggestPawnMoves(piece);
     }
   }
 
-  function suggestKingMoves(piece: Piece): Move[] {
+  private suggestKingMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
     for (let i = piece.position.x - 1; i <= piece.position.x + 1; i++) {
       for (let j = piece.position.y - 1; j <= piece.position.y + 1; j++) {
-        if (isPositionValid(piece, vec2(i, j)))
-          result.push(makeMove(piece, vec2(i, j)));
+        if (this.isPositionValid(piece, vec2(i, j)))
+          result.push(this.makeMove(piece, vec2(i, j)));
       }
     }
 
-    if (data.moves.filter(m => toRaw(m.piece) == toRaw(piece)).length != 0)
+    if (this.moves.filter(m => m.piece == piece).length != 0)
       return result;
 
-    const kingSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && data.moves.filter(m => toRaw(m.piece) == toRaw(p)).length == 0);
-    const queenSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && data.moves.filter(m => toRaw(m.piece) == toRaw(p)).length == 0);
+    const kingSideRook = this.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && this.moves.filter(m => m.piece == p).length == 0);
+    const queenSideRook = this.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && this.moves.filter(m => m.piece == p).length == 0);
 
-    if (kingSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
-      result.push(makeMove(piece, vec2(piece.position.x + 2, piece.position.y), "king"));
+    if (kingSideRook && this.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
+      result.push(this.makeMove(piece, vec2(piece.position.x + 2, piece.position.y), "king"));
     }
 
-    if (queenSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
-      result.push(makeMove(piece, vec2(piece.position.x - 2, piece.position.y), "queen"));
+    if (queenSideRook && this.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
+      result.push(this.makeMove(piece, vec2(piece.position.x - 2, piece.position.y), "queen"));
     }
 
     return result;
   }
 
-  function suggestQueenMoves(piece: Piece): Move[] {
+  private suggestQueenMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
-    result.push(...suggestRookMoves(piece));
-    result.push(...suggestBishopMoves(piece));
+    result.push(...this.suggestRookMoves(piece));
+    result.push(...this.suggestBishopMoves(piece));
 
     return result;
   }
 
-  function suggestRookMoves(piece: Piece): Move[] {
+  private suggestRookMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
-    result.push(...progressPosition(piece, vec2(1, 0)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(-1, 0)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(0, 1)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(0, -1)).map(v => makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(1, 0)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(-1, 0)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(0, 1)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(0, -1)).map(v => this.makeMove(piece, v)));
 
     return result;
   }
 
-  function suggestKnightMoves(piece: Piece): Move[] {
+  private suggestKnightMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
     const dir = [vec2(2, 1), vec2(2, -1), vec2(-2, 1), vec2(-2, -1), vec2(1, 2), vec2(1, -2), vec2(-1, 2), vec2(-1, -2)];
     for (let i = 0; i < dir.length; i++) {
       const pos = vec2(piece.position.x + dir[i].x, piece.position.y + dir[i].y);
-      if (isPositionValid(piece, pos))
-        result.push(makeMove(piece, pos));
+      if (this.isPositionValid(piece, pos))
+        result.push(this.makeMove(piece, pos));
     }
 
     return result;
   }
 
-  function suggestBishopMoves(piece: Piece): Move[] {
+  private suggestBishopMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
-    result.push(...progressPosition(piece, vec2(1, 1)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(-1, 1)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(1, -1)).map(v => makeMove(piece, v)));
-    result.push(...progressPosition(piece, vec2(-1, -1)).map(v => makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(1, 1)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(-1, 1)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(1, -1)).map(v => this.makeMove(piece, v)));
+    result.push(...this.progressPosition(piece, vec2(-1, -1)).map(v => this.makeMove(piece, v)));
 
     return result;
   }
 
-  function suggestPawnMoves(piece: Piece): Move[] {
+  private suggestPawnMoves(piece: Piece): Move[] {
     const result: Move[] = [];
 
     const frontPos = vec2(piece.position.x, piece.position.y + (piece.color == "white" ? +1 : -1));
-    const frontCapture = data.pieces.find(p => p.position.x == frontPos.x && p.position.y == frontPos.y);
-    if (!frontCapture && isPositionValid(piece, frontPos)) {
-      result.push(makeMove(piece, frontPos, null, frontPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+    const frontCapture = this.pieces.find(p => p.position.x == frontPos.x && p.position.y == frontPos.y);
+    if (!frontCapture && this.isPositionValid(piece, frontPos)) {
+      result.push(this.makeMove(piece, frontPos, null, frontPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const frontLeftPos = vec2(frontPos.x - 1, frontPos.y);
-    const frontLeftCapture = data.pieces.find(p => p.position.x == frontLeftPos.x && p.position.y == frontLeftPos.y);
-    if (frontLeftCapture && isPositionValid(piece, frontLeftPos)) {
-      result.push(makeMove(piece, frontLeftPos, null, frontLeftPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+    const frontLeftCapture = this.pieces.find(p => p.position.x == frontLeftPos.x && p.position.y == frontLeftPos.y);
+    if (frontLeftCapture && this.isPositionValid(piece, frontLeftPos)) {
+      result.push(this.makeMove(piece, frontLeftPos, null, frontLeftPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const frontRightPos = vec2(frontPos.x + 1, frontPos.y);
-    const frontRightCapture = data.pieces.find(p => p.position.x == frontRightPos.x && p.position.y == frontRightPos.y);
-    if (frontRightCapture && isPositionValid(piece, frontRightPos)) {
-      result.push(makeMove(piece, frontRightPos, null, frontRightPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+    const frontRightCapture = this.pieces.find(p => p.position.x == frontRightPos.x && p.position.y == frontRightPos.y);
+    if (frontRightCapture && this.isPositionValid(piece, frontRightPos)) {
+      result.push(this.makeMove(piece, frontRightPos, null, frontRightPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const doubleFrontPos = vec2(frontPos.x, frontPos.y + (piece.color == "white" ? +1 : -1));
-    const doubleFrontCapture = data.pieces.find(p => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
-    if (!doubleFrontCapture && isPositionValid(piece, doubleFrontPos) && data.moves.filter(m => toRaw(m.piece) == toRaw(piece)).length == 0) {
-      result.push(makeMove(piece, doubleFrontPos));
+    const doubleFrontCapture = this.pieces.find(p => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
+    if (!doubleFrontCapture && this.isPositionValid(piece, doubleFrontPos) && this.moves.filter(m => m.piece == piece).length == 0) {
+      result.push(this.makeMove(piece, doubleFrontPos));
     }
 
-    if (data.moves.length == 0)
+    if (this.moves.length == 0)
       return result;
 
-    const enPassantMove = data.moves[data.moves.length - 1];
+    const enPassantMove = this.moves[this.moves.length - 1];
     if (enPassantMove.piece.type != "pawn")
       return result;
     if (enPassantMove.piece.color == piece.color)
       return result;
-    if (data.moves.filter(m => toRaw(m.piece) == toRaw(enPassantMove.piece)).length > 1)
+    if (this.moves.filter(m => m.piece == enPassantMove.piece).length > 1)
       return result;
     if (enPassantMove.piece.position.y != piece.position.y)
       return result;
@@ -345,8 +352,8 @@ export function useChessGame() {
     return result;
   }
 
-  function isSquareAttacked(pos: Vector2, by: Color): boolean {
-    const unsafeSuggestions = suggestMovesUnsafe();
+  private isSquareAttacked(pos: Vector2, by: Color): boolean {
+    const unsafeSuggestions = this.suggestMovesUnsafe();
     for (const move of unsafeSuggestions) {
       if (move.piece.color == by && move.to.x == pos.x && move.to.y == pos.y)
         return true;
@@ -355,30 +362,404 @@ export function useChessGame() {
     return false;
   }
 
-  function isInCheck(color: Color): boolean {
-    const king = data.pieces.find(p => p.type == "king" && p.color == color);
+  private isInCheck(color: Color): boolean {
+    const king = this.pieces.find(p => p.type == "king" && p.color == color);
 
     if (king ==  undefined) {
       console.error("king is missing");
       return false;
     }
 
-    return isSquareAttacked(king.position, color == "white" ? "black" : "white");
+    return this.isSquareAttacked(king.position, color == "white" ? "black" : "white");
   }
 
-  function isBoardInCheck(): Color | null {
-    if (isInCheck("white")) return "white";
-    if (isInCheck("black")) return "black";
+  public isBoardInCheck(): Color | null {
+    if (this.isInCheck("white")) return "white";
+    if (this.isInCheck("black")) return "black";
     return null;
   }
-
-  return {
-    pieces: screenPieces,
-    suggestions,
-    turn,
-    loadFen,
-    requestMove,
-    requestUnmove,
-    isBoardInCheck,
-  }
 }
+
+// export function useChessGame() {
+//   // const pieces = ref<Piece[]>([]);
+//   // const moves = ref<Move[]>([]);
+//   const screenPieces = ref<Piece[]>([]);
+//   const screenSuggestions = ref<Move[]>([]);
+//   const turn = ref<Color>("white");
+
+//   const data = {
+//     pieces: Array<Piece>(),
+//     moves: Array<Move>(),
+//     suggestions: Array<Move>(),
+//   };
+
+//   function updateScreen() {
+//     screenPieces.value = [...data.pieces];
+//     screenSuggestions.value = [...data.suggestions];
+//   }
+
+//   function loadFen(fen: string): boolean {
+//     const new_pieces: Piece[] = [];
+
+//     let x = 1, y = 1, i = 0;
+//     while (y <= 8) {
+//       if ((fen[i] == '/' && x > 8) || (x > 8 && y == 8)) {
+//         y++;
+//         x = 1;
+//       } else if (x > 8) {
+//         return false;
+//       } else if (isChessLetter(fen[i])) {
+//         const color = fen[i] == fen[i].toUpperCase() ? "black" : "white";
+//         const type = letterToPieceType(fen[i]);
+//         new_pieces.push(makePiece(type, color, vec2(x, y)));
+//         x++;
+//       } else if ('0' <= fen[i] && fen[i] <= '9') {
+//         x += +fen[i];
+//       } else {
+//         return false;
+//       }
+
+//       i++;
+//     }
+
+//     data.pieces = new_pieces;
+//     suggestMoves();
+//     updateScreen();
+//     return true;
+//   }
+
+//   function nextTurn() {
+//     turn.value = turn.value == "white" ? "black" : "white";
+//   }
+
+//   function requestMove(piece: Piece, pos: Vector2): boolean {
+//     const nextMove = data.suggestions.find(m => m.piece == piece && m.to.x == pos.x && m.to.y == pos.y);
+//     if (!nextMove) return false;
+
+//     move(nextMove);
+//     suggestMoves();
+//     updateScreen();
+
+//     return true;
+//   }
+
+//   function requestUnmove(): Move {
+//     const lastMove = unmove();
+//     suggestMoves();
+//     updateScreen();
+
+//     return lastMove;
+//   }
+
+//   function move(move: Move): boolean {
+//     data.pieces = data.pieces.filter(p => p != move.capture);
+//     data.moves.push(move);
+
+//     move.piece.position = {...move.to};
+//     if (move.capture) move.capture.position = vec2(0, 0);
+
+//     if (move.castle) castle(move);
+//     if (move.promotion) promote(move);
+
+//     nextTurn();
+//     if (isInCheck(move.piece.color)) {
+//       unmove();
+//       return false;
+//     }
+
+//     return true;
+//   }
+
+//   function unmove(): Move {
+//     if (data.moves.length <= 0)
+//       throw new Error("No moves!!");
+
+//     const lastMove = data.moves[data.moves.length - 1];
+//     data.moves = data.moves.filter(m => m != lastMove);
+
+//     lastMove.piece.position = {...lastMove.from};
+//     if (lastMove.capture) {
+//       data.pieces.push(lastMove.capture);
+//       lastMove.capture.position = {...lastMove.to};
+//     }
+
+//     if (lastMove.castle) uncastle(lastMove);
+//     if (lastMove.promotion) unpromote(lastMove);
+//     if (lastMove.en_passant && lastMove.capture) lastMove.capture.position = {...lastMove.en_passant};
+
+//     nextTurn();
+
+//     return lastMove;
+//   }
+
+//   function castle(move: Move) {
+//     if (move.castle == null)
+//       throw new Error("castle is null!!!");
+
+//     const rook = data.pieces.find(p => p.type == "rook" && p.position.x == (move.castle == "king" ? 8 : 1) && p.position.y == move.piece.position.y);
+//     if (rook == undefined)
+//       throw new Error(`no ${move.castle} side rook`);
+
+//     rook.position = vec2(move.piece.position.x + (move.castle == "king" ? -1 : +1), move.piece.position.y);
+//   }
+
+//   function uncastle(move: Move) {
+//     if (move.castle == null)
+//       throw new Error("castle is null!!!");
+
+//     const rook = data.pieces.find(p => p.type == "rook" && p.position.x == move.to.x + (move.castle == "king" ? -1 : +1) && p.position.y == move.to.y);
+//     if (rook == undefined)
+//       throw new Error(`no ${move.castle} side rook`);
+
+//     rook.position = vec2(move.castle == "king" ? 8 : 1, move.piece.position.y);
+//   }
+
+//   function promote(move: Move) {
+//     if (move.promotion == null)
+//       throw new Error("this isnt a promotion!!");
+
+//     move.piece.type = move.promotion;
+//   }
+
+//   function unpromote(move: Move) {
+//     if (move.promotion == null)
+//       throw new Error("this isnt a promotion!!");
+
+//     move.piece.type = "pawn";
+//   }
+
+//   function makeMove(piece: Piece, position: Vector2, castle?: Move["castle"], promotion?: Move["promotion"], en_passant?: Move["en_passant"]): Move {
+//     const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y);
+//     return {
+//       piece,
+//       to: {...position},
+//       from: {...piece.position},
+//       capture: capture ?? null,
+//       castle: castle ?? null,
+//       promotion: promotion ?? null,
+//       en_passant: (en_passant && {...en_passant}) ?? null,
+//     }
+//   }
+
+//   function isPositionValid(piece: Piece, position: Vector2): boolean {
+//     if (piece.position.x == position.x && piece.position.y == position.y) return false;
+//     if (piece.position.x == position.x && piece.position.y == position.y) return false;
+//     if (position.x < 1 || position.y < 1 || position.x > 8 || position.y > 8) return false;
+//     const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y && p.color == piece.color);
+//     if (capture) return false;
+//     return true;
+//   }
+
+//   function progressPosition(piece: Piece, step: Vector2): Vector2[] {
+//     const result: Vector2[] = [];
+
+//     for (let i = piece.position.x + step.x, j = piece.position.y + step.y; isPositionValid(piece, vec2(i, j)); i += step.x, j += step.y) {
+//       result.push(vec2(i, j));
+//       if (data.pieces.find(p => p.position.x == i && p.position.y == j))
+//         break;
+//     }
+
+//     return result;
+//   }
+
+//   function isMoveValid(newMove: Move): boolean {
+//     const ok = move(newMove);
+//     if (ok) unmove();
+//     return ok;
+//   }
+
+//   function suggestMoves() {
+//     data.suggestions = suggestMovesUnsafe()
+//     .filter(m => m.piece.color == turn.value && isMoveValid(m))
+//     .filter(m => m.castle == null || !isInCheck(m.piece.color))
+//     .filter(m => m.castle != "king" 
+//       || (!isSquareAttacked(vec2(m.piece.position.x + 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+//       && !isSquareAttacked(vec2(m.piece.position.x + 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")))
+//     .filter(m => m.castle != "queen" 
+//       || (!isSquareAttacked(vec2(m.piece.position.x - 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+//       && !isSquareAttacked(vec2(m.piece.position.x - 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")));
+//   }
+
+//   function suggestMovesUnsafe(): Move[] {
+//     const result: Move[] = [];
+//     for (const piece of data.pieces) {
+//       result.push(...suggestPieceMoves(piece));
+//     }
+//     return result;
+//   }
+
+//   function suggestPieceMoves(piece: Piece): Move[] {
+//     switch (piece.type) {
+//       case "king": return suggestKingMoves(piece);
+//       case "queen": return suggestQueenMoves(piece);
+//       case "rook": return suggestRookMoves(piece);
+//       case "knight": return suggestKnightMoves(piece);
+//       case "bishop": return suggestBishopMoves(piece);
+//       case "pawn": return suggestPawnMoves(piece);
+//     }
+//   }
+
+//   function suggestKingMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     for (let i = piece.position.x - 1; i <= piece.position.x + 1; i++) {
+//       for (let j = piece.position.y - 1; j <= piece.position.y + 1; j++) {
+//         if (isPositionValid(piece, vec2(i, j)))
+//           result.push(makeMove(piece, vec2(i, j)));
+//       }
+//     }
+
+//     if (data.moves.filter(m => m.piece == piece).length != 0)
+//       return result;
+
+//     const kingSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && data.moves.filter(m => m.piece == p).length == 0);
+//     const queenSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && data.moves.filter(m => m.piece == p).length == 0);
+
+//     if (kingSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
+//       result.push(makeMove(piece, vec2(piece.position.x + 2, piece.position.y), "king"));
+//     }
+
+//     if (queenSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
+//       result.push(makeMove(piece, vec2(piece.position.x - 2, piece.position.y), "queen"));
+//     }
+
+//     return result;
+//   }
+
+//   function suggestQueenMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     result.push(...suggestRookMoves(piece));
+//     result.push(...suggestBishopMoves(piece));
+
+//     return result;
+//   }
+
+//   function suggestRookMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     result.push(...progressPosition(piece, vec2(1, 0)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(-1, 0)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(0, 1)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(0, -1)).map(v => makeMove(piece, v)));
+
+//     return result;
+//   }
+
+//   function suggestKnightMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     const dir = [vec2(2, 1), vec2(2, -1), vec2(-2, 1), vec2(-2, -1), vec2(1, 2), vec2(1, -2), vec2(-1, 2), vec2(-1, -2)];
+//     for (let i = 0; i < dir.length; i++) {
+//       const pos = vec2(piece.position.x + dir[i].x, piece.position.y + dir[i].y);
+//       if (isPositionValid(piece, pos))
+//         result.push(makeMove(piece, pos));
+//     }
+
+//     return result;
+//   }
+
+//   function suggestBishopMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     result.push(...progressPosition(piece, vec2(1, 1)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(-1, 1)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(1, -1)).map(v => makeMove(piece, v)));
+//     result.push(...progressPosition(piece, vec2(-1, -1)).map(v => makeMove(piece, v)));
+
+//     return result;
+//   }
+
+//   function suggestPawnMoves(piece: Piece): Move[] {
+//     const result: Move[] = [];
+
+//     const frontPos = vec2(piece.position.x, piece.position.y + (piece.color == "white" ? +1 : -1));
+//     const frontCapture = data.pieces.find(p => p.position.x == frontPos.x && p.position.y == frontPos.y);
+//     if (!frontCapture && isPositionValid(piece, frontPos)) {
+//       result.push(makeMove(piece, frontPos, null, frontPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+//     }
+
+//     const frontLeftPos = vec2(frontPos.x - 1, frontPos.y);
+//     const frontLeftCapture = data.pieces.find(p => p.position.x == frontLeftPos.x && p.position.y == frontLeftPos.y);
+//     if (frontLeftCapture && isPositionValid(piece, frontLeftPos)) {
+//       result.push(makeMove(piece, frontLeftPos, null, frontLeftPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+//     }
+
+//     const frontRightPos = vec2(frontPos.x + 1, frontPos.y);
+//     const frontRightCapture = data.pieces.find(p => p.position.x == frontRightPos.x && p.position.y == frontRightPos.y);
+//     if (frontRightCapture && isPositionValid(piece, frontRightPos)) {
+//       result.push(makeMove(piece, frontRightPos, null, frontRightPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
+//     }
+
+//     const doubleFrontPos = vec2(frontPos.x, frontPos.y + (piece.color == "white" ? +1 : -1));
+//     const doubleFrontCapture = data.pieces.find(p => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
+//     if (!doubleFrontCapture && isPositionValid(piece, doubleFrontPos) && data.moves.filter(m => m.piece == piece).length == 0) {
+//       result.push(makeMove(piece, doubleFrontPos));
+//     }
+
+//     if (data.moves.length == 0)
+//       return result;
+
+//     const enPassantMove = data.moves[data.moves.length - 1];
+//     if (enPassantMove.piece.type != "pawn")
+//       return result;
+//     if (enPassantMove.piece.color == piece.color)
+//       return result;
+//     if (data.moves.filter(m => m.piece == enPassantMove.piece).length > 1)
+//       return result;
+//     if (enPassantMove.piece.position.y != piece.position.y)
+//       return result;
+//     if (Math.abs(enPassantMove.piece.position.x - piece.position.x) != 1)
+//       return result;
+
+//     const enPassantPos = vec2(enPassantMove.piece.position.x, piece.position.y + (piece.color == "white" ? +1 : -1));
+//     result.push({
+//       piece,
+//       to: enPassantPos,
+//       from: {...piece.position},
+//       capture: enPassantMove.piece,
+//       castle: null,
+//       promotion: null,
+//       en_passant: {...enPassantMove.from},
+//     });
+
+//     return result;
+//   }
+
+//   function isSquareAttacked(pos: Vector2, by: Color): boolean {
+//     const unsafeSuggestions = suggestMovesUnsafe();
+//     for (const move of unsafeSuggestions) {
+//       if (move.piece.color == by && move.to.x == pos.x && move.to.y == pos.y)
+//         return true;
+//     }
+
+//     return false;
+//   }
+
+//   function isInCheck(color: Color): boolean {
+//     const king = data.pieces.find(p => p.type == "king" && p.color == color);
+
+//     if (king ==  undefined) {
+//       console.error("king is missing");
+//       return false;
+//     }
+
+//     return isSquareAttacked(king.position, color == "white" ? "black" : "white");
+//   }
+
+//   function isBoardInCheck(): Color | null {
+//     if (isInCheck("white")) return "white";
+//     if (isInCheck("black")) return "black";
+//     return null;
+//   }
+
+//   return {
+//     pieces: screenPieces,
+//     suggestions: screenSuggestions,
+//     turn,
+//     loadFen,
+//     requestMove,
+//     requestUnmove,
+//     isBoardInCheck,
+//   }
+// }

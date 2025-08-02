@@ -2,7 +2,7 @@
 import { vec2, type Piece, type Vector2 } from '@/chess/types';
 import useChessBoardContext from '@/tools/use_chess_board_context';
 import useWindowEvent from '@/tools/use_window_event';
-import { ref, watch } from 'vue';
+import { onUpdated, ref, watch, watchEffect } from 'vue';
 
 const props = defineProps<{
   piece: Piece,

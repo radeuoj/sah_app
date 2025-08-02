@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { makePiece, vec2, type Color, type Piece, type Vector2 } from '@/chess/types';
+import { makePiece, vec2, type Color, type Move, type Piece, type Vector2 } from '@/chess/types';
 import ChessPiece from './ChessPiece.vue';
-import { computed, inject, onMounted, onUnmounted, provide, ref, useTemplateRef, watch, watchEffect, type ShallowRef } from 'vue';
-import { useChessGame } from '@/chess';
+import { computed, inject, onMounted, onUnmounted, onUpdated, provide, ref, useTemplateRef, watch, watchEffect, type ShallowRef } from 'vue';
+import { ChessGame } from '@/chess';
 import useWindowEvent from '@/tools/use_window_event';
 import ChessTargetSquare from './ChessTargetSquare.vue';
 import ChessMoveSuggestion from './ChessMoveSuggestion.vue';
 import type { BoardData } from '@/tools/use_chess_board_context';
 
 const props = defineProps<{
-  game: ReturnType<typeof useChessGame>,
+  game: ChessGame,
+  pieces: Piece[],
+  suggestions: Move[],
   side: Color,
 }>();
 
@@ -57,10 +59,10 @@ function handlePieceUnselect(piece: Piece, newPos: Vector2) {
     <ChessTargetSquare :visible="selectedPiece != null" :get-bounding-client-rect="() => board_ref.getBoundingClientRect()" />
 
     <!-- Pieces -->
-    <ChessPiece v-for="piece of game.pieces.value" :piece @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
+    <ChessPiece v-for="piece of props.pieces" :piece @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
 
     <!-- Move suggestions -->
-    <ChessMoveSuggestion v-for="move of game.suggestions.value.filter((m) => m.piece == selectedPiece)" :position="move.to" :capture="move.capture != null" />
+    <ChessMoveSuggestion v-for="move of props.suggestions.filter((m) => m.piece == selectedPiece)" :position="move.to" :capture="move.capture != null" />
   </div>
 </template>
 

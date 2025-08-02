@@ -1,18 +1,30 @@
 <script setup lang="ts">
-import { useChessGame } from '@/chess';
-import type { Color } from '@/chess/types';
+import { ChessGame } from '@/chess';
+import type { Color, Move, Piece } from '@/chess/types';
 import ChessBoard from '@/components/ChessBoard.vue';
-import { computed, ref, watch } from 'vue';
+import { ref, shallowRef, watch } from 'vue';
 
 const side = ref<Color>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-const game = useChessGame();
+// const game = useChessGame();
+
+const pieces = ref<Piece[]>([]);
+const moves = ref<Move[]>([]);
+const suggestions = ref<Move[]>([]);
+const turn = ref<Color>("white");
+
+const game = new ChessGame((gamePieces, gameMoves, gameSuggestions, gameTurn) => {
+  pieces.value = gamePieces;
+  moves.value = gameMoves;
+  suggestions.value = gameSuggestions;
+  turn.value = gameTurn;
+});
 
 watch(fen, () => {
   game.loadFen(fen.value);
 }, { immediate: true });
 
-const check = computed(() => game.isBoardInCheck())
+// const check = computed(() => game.isBoardInCheck())
 </script>
 
 <template>
@@ -29,12 +41,12 @@ const check = computed(() => game.isBoardInCheck())
         <label for="fen">fen</label>
         <input id="fen" v-model="fen" />
       </div>
-      <div>current turn: {{ game.turn }}</div>
-      <div>check: {{ check ?? 'null' }}</div>
-      <div><button @click="game.requestUnmove()">unmove</button></div>
+      <div>current turn: {{ turn }}</div>
+      <!--<div>check: {{ check ?? 'null' }}</div>
+      <div><button @click="game.requestUnmove()">unmove</button></div>-->
     </div>
     <div class="center">
-      <ChessBoard :game :side />
+      <ChessBoard :game :pieces :suggestions :side />
     </div>
     <div class="right"></div>
   </div>
