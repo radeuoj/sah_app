@@ -7,6 +7,10 @@ export function useChessGame() {
   const suggestions = ref<Move[]>([]);
   const turn = ref<Color>("white");
 
+  const data = {
+
+  };
+
   function loadFen(fen: string): boolean {
     const new_pieces: Piece[] = [];
 
@@ -48,6 +52,13 @@ export function useChessGame() {
     suggestMoves();
 
     return true;
+  }
+
+  function requestUnmove(): Move {
+    const lastMove = unmove();
+    suggestMoves();
+
+    return lastMove;
   }
 
   function move(move: Move): boolean {
@@ -168,7 +179,15 @@ export function useChessGame() {
   }
 
   function suggestMoves() {
-    suggestions.value = suggestMovesUnsafe().filter(m => m.piece.color == turn.value && isMoveValid(m));
+    suggestions.value = suggestMovesUnsafe()
+    .filter(m => m.piece.color == turn.value && isMoveValid(m))
+    .filter(m => m.castle == null || !isInCheck(m.piece.color))
+    .filter(m => m.castle != "king" 
+      || (!isSquareAttacked(vec2(m.piece.position.x + 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+      && !isSquareAttacked(vec2(m.piece.position.x + 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")))
+    .filter(m => m.castle != "queen" 
+      || (!isSquareAttacked(vec2(m.piece.position.x - 1, m.piece.position.y), m.piece.color == "white" ? "black" : "white") 
+      && !isSquareAttacked(vec2(m.piece.position.x - 2, m.piece.position.y), m.piece.color == "white" ? "black" : "white")));
   }
 
   function suggestMovesUnsafe(): Move[] {
@@ -198,6 +217,20 @@ export function useChessGame() {
         if (isPositionValid(piece, vec2(i, j)))
           result.push(makeMove(piece, vec2(i, j)));
       }
+    }
+
+    if (moves.value.filter(m => m.piece == piece).length != 0)
+      return result;
+
+    const kingSideRook = pieces.value.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && moves.value.filter(m => m.piece == p).length == 0);
+    const queenSideRook = pieces.value.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && moves.value.filter(m => m.piece == p).length == 0);
+
+    if (kingSideRook && pieces.value.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
+      result.push(makeMove(piece, vec2(piece.position.x + 2, piece.position.y), "king"));
+    }
+
+    if (queenSideRook && pieces.value.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
+      result.push(makeMove(piece, vec2(piece.position.x - 2, piece.position.y), "queen"));
     }
 
     return result;
@@ -337,6 +370,7 @@ export function useChessGame() {
     turn,
     loadFen,
     requestMove,
+    requestUnmove,
     isBoardInCheck,
   }
 }

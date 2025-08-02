@@ -11,17 +11,10 @@ import type { BoardData } from '@/tools/use_chess_board_context';
 const props = defineProps<{
   game: ReturnType<typeof useChessGame>,
   side: Color,
-  fen: string,
 }>();
 
 const selectedPiece = ref<Piece | null>(null);
 const board_ref = useTemplateRef("board") as Readonly<ShallowRef<HTMLDivElement>>;
-
-watch(() => props.fen, () => {
-  props.game.loadFen(props.fen);
-}, {
-  immediate: true,
-});
 
 provide<BoardData>("board", {
   getSide: () => props.side,
