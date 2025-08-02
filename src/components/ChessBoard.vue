@@ -57,10 +57,10 @@ function handlePieceUnselect(piece: Piece, newPos: Vector2) {
     <ChessTargetSquare :visible="selectedPiece != null" :get-bounding-client-rect="() => board_ref.getBoundingClientRect()" />
 
     <!-- Pieces -->
-    <ChessPiece v-for="piece in game.pieces.value" :piece @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
+    <ChessPiece v-for="piece of game.pieces.value" :piece @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
 
     <!-- Move suggestions -->
-    <ChessMoveSuggestion v-for="move in game.suggestions.value.filter((m) => m.piece == selectedPiece)" :position="move.to" :capture="move.capture != null" />
+    <ChessMoveSuggestion v-for="move of game.suggestions.value.filter((m) => m.piece == selectedPiece)" :position="move.to" :capture="move.capture != null" />
   </div>
 </template>
 

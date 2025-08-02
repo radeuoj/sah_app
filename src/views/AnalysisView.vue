@@ -12,7 +12,7 @@ watch(fen, () => {
   game.loadFen(fen.value);
 }, { immediate: true });
 
-// const check = computed(() => game.isBoardInCheck())
+const check = computed(() => game.isBoardInCheck())
 </script>
 
 <template>
@@ -30,8 +30,8 @@ watch(fen, () => {
         <input id="fen" v-model="fen" />
       </div>
       <div>current turn: {{ game.turn }}</div>
+      <div>check: {{ check ?? 'null' }}</div>
       <div><button @click="game.requestUnmove()">unmove</button></div>
-      <!-- <div>check: {{ check ?? 'null' }}</div> -->
     </div>
     <div class="center">
       <ChessBoard :game :side />

@@ -1,15 +1,21 @@
-import { ref, type Ref } from "vue";
+import { isProxy, ref, toRaw, type Ref } from "vue";
 import { isChessLetter, letterToPieceType, makePiece, vec2, type Color, type Piece, type Vector2, type Move } from "./types";
 
 export function useChessGame() {
-  const pieces = ref<Piece[]>([]);
-  const moves = ref<Move[]>([]);
+  // const pieces = ref<Piece[]>([]);
+  // const moves = ref<Move[]>([]);
+  const screenPieces = ref<Piece[]>([]);
   const suggestions = ref<Move[]>([]);
   const turn = ref<Color>("white");
 
   const data = {
-
+    pieces: Array<Piece>(),
+    moves: Array<Move>(),
   };
+
+  function updateScreen() {
+    screenPieces.value = [...data.pieces];
+  }
 
   function loadFen(fen: string): boolean {
     const new_pieces: Piece[] = [];
@@ -35,7 +41,8 @@ export function useChessGame() {
       i++;
     }
 
-    pieces.value = new_pieces;
+    data.pieces = new_pieces;
+    updateScreen();
     suggestMoves();
     return true;
   }
@@ -49,6 +56,7 @@ export function useChessGame() {
     if (!nextMove) return false;
 
     move(nextMove);
+    updateScreen();
     suggestMoves();
 
     return true;
@@ -56,14 +64,15 @@ export function useChessGame() {
 
   function requestUnmove(): Move {
     const lastMove = unmove();
+    updateScreen();
     suggestMoves();
 
     return lastMove;
   }
 
   function move(move: Move): boolean {
-    pieces.value = pieces.value.filter(p => p != move.capture);
-    moves.value.push(move);
+    data.pieces = data.pieces.filter(p => toRaw(p) != toRaw(move.capture));
+    data.moves.push(toRaw(move));
 
     move.piece.position = {...move.to};
     if (move.capture) move.capture.position = vec2(0, 0);
@@ -81,15 +90,15 @@ export function useChessGame() {
   }
 
   function unmove(): Move {
-    if (moves.value.length <= 0)
+    if (data.moves.length <= 0)
       throw new Error("No moves!!");
 
-    const lastMove = moves.value[moves.value.length - 1];
-    moves.value = moves.value.filter(m => m != lastMove);
+    const lastMove = data.moves[data.moves.length - 1];
+    data.moves = data.moves.filter(m => toRaw(m) != toRaw(lastMove));
 
     lastMove.piece.position = {...lastMove.from};
     if (lastMove.capture) {
-      pieces.value.push(lastMove.capture);
+      data.pieces.push(toRaw(lastMove.capture));
       lastMove.capture.position = {...lastMove.to};
     }
 
@@ -106,7 +115,7 @@ export function useChessGame() {
     if (move.castle == null)
       throw new Error("castle is null!!!");
 
-    const rook = pieces.value.find(p => p.type == "rook" && p.position.x == (move.castle == "king" ? 8 : 1) && p.position.y == move.piece.position.y);
+    const rook = data.pieces.find(p => p.type == "rook" && p.position.x == (move.castle == "king" ? 8 : 1) && p.position.y == move.piece.position.y);
     if (rook == undefined)
       throw new Error(`no ${move.castle} side rook`);
 
@@ -117,7 +126,7 @@ export function useChessGame() {
     if (move.castle == null)
       throw new Error("castle is null!!!");
 
-    const rook = pieces.value.find(p => p.type == "rook" && p.position.x == move.to.x + (move.castle == "king" ? -1 : +1) && p.position.y == move.to.y);
+    const rook = data.pieces.find(p => p.type == "rook" && p.position.x == move.to.x + (move.castle == "king" ? -1 : +1) && p.position.y == move.to.y);
     if (rook == undefined)
       throw new Error(`no ${move.castle} side rook`);
 
@@ -139,7 +148,7 @@ export function useChessGame() {
   }
 
   function makeMove(piece: Piece, position: Vector2, castle?: Move["castle"], promotion?: Move["promotion"], en_passant?: Move["en_passant"]): Move {
-    const capture = pieces.value.find((p) => p.position.x == position.x && p.position.y == position.y);
+    const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y);
     return {
       piece,
       to: {...position},
@@ -155,7 +164,7 @@ export function useChessGame() {
     if (piece.position.x == position.x && piece.position.y == position.y) return false;
     if (piece.position.x == position.x && piece.position.y == position.y) return false;
     if (position.x < 1 || position.y < 1 || position.x > 8 || position.y > 8) return false;
-    const capture = pieces.value.find((p) => p.position.x == position.x && p.position.y == position.y && p.color == piece.color);
+    const capture = data.pieces.find((p) => p.position.x == position.x && p.position.y == position.y && p.color == piece.color);
     if (capture) return false;
     return true;
   }
@@ -165,7 +174,7 @@ export function useChessGame() {
 
     for (let i = piece.position.x + step.x, j = piece.position.y + step.y; isPositionValid(piece, vec2(i, j)); i += step.x, j += step.y) {
       result.push(vec2(i, j));
-      if (pieces.value.find(p => p.position.x == i && p.position.y == j))
+      if (data.pieces.find(p => p.position.x == i && p.position.y == j))
         break;
     }
 
@@ -192,7 +201,7 @@ export function useChessGame() {
 
   function suggestMovesUnsafe(): Move[] {
     const result: Move[] = [];
-    for (const piece of pieces.value) {
+    for (const piece of data.pieces) {
       result.push(...suggestPieceMoves(piece));
     }
     return result;
@@ -219,17 +228,17 @@ export function useChessGame() {
       }
     }
 
-    if (moves.value.filter(m => m.piece == piece).length != 0)
+    if (data.moves.filter(m => toRaw(m.piece) == toRaw(piece)).length != 0)
       return result;
 
-    const kingSideRook = pieces.value.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && moves.value.filter(m => m.piece == p).length == 0);
-    const queenSideRook = pieces.value.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && moves.value.filter(m => m.piece == p).length == 0);
+    const kingSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 8 && data.moves.filter(m => toRaw(m.piece) == toRaw(p)).length == 0);
+    const queenSideRook = data.pieces.find(p => p.type == "rook" && p.color == piece.color && p.position.x == 1 && data.moves.filter(m => toRaw(m.piece) == toRaw(p)).length == 0);
 
-    if (kingSideRook && pieces.value.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
+    if (kingSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x + 1 || p.position.x == piece.position.x + 2)).length == 0) {
       result.push(makeMove(piece, vec2(piece.position.x + 2, piece.position.y), "king"));
     }
 
-    if (queenSideRook && pieces.value.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
+    if (queenSideRook && data.pieces.filter(p => p.position.y == piece.position.y && (p.position.x == piece.position.x - 1 || p.position.x == piece.position.x - 2)).length == 0) {
       result.push(makeMove(piece, vec2(piece.position.x - 2, piece.position.y), "queen"));
     }
 
@@ -284,38 +293,38 @@ export function useChessGame() {
     const result: Move[] = [];
 
     const frontPos = vec2(piece.position.x, piece.position.y + (piece.color == "white" ? +1 : -1));
-    const frontCapture = pieces.value.find(p => p.position.x == frontPos.x && p.position.y == frontPos.y);
+    const frontCapture = data.pieces.find(p => p.position.x == frontPos.x && p.position.y == frontPos.y);
     if (!frontCapture && isPositionValid(piece, frontPos)) {
       result.push(makeMove(piece, frontPos, null, frontPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const frontLeftPos = vec2(frontPos.x - 1, frontPos.y);
-    const frontLeftCapture = pieces.value.find(p => p.position.x == frontLeftPos.x && p.position.y == frontLeftPos.y);
+    const frontLeftCapture = data.pieces.find(p => p.position.x == frontLeftPos.x && p.position.y == frontLeftPos.y);
     if (frontLeftCapture && isPositionValid(piece, frontLeftPos)) {
       result.push(makeMove(piece, frontLeftPos, null, frontLeftPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const frontRightPos = vec2(frontPos.x + 1, frontPos.y);
-    const frontRightCapture = pieces.value.find(p => p.position.x == frontRightPos.x && p.position.y == frontRightPos.y);
+    const frontRightCapture = data.pieces.find(p => p.position.x == frontRightPos.x && p.position.y == frontRightPos.y);
     if (frontRightCapture && isPositionValid(piece, frontRightPos)) {
       result.push(makeMove(piece, frontRightPos, null, frontRightPos.y == (piece.color == "white" ? 8 : 1) ? "queen" : null));
     }
 
     const doubleFrontPos = vec2(frontPos.x, frontPos.y + (piece.color == "white" ? +1 : -1));
-    const doubleFrontCapture = pieces.value.find(p => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
-    if (!doubleFrontCapture && isPositionValid(piece, doubleFrontPos) && moves.value.filter(m => m.piece == piece).length == 0) {
+    const doubleFrontCapture = data.pieces.find(p => p.position.x == doubleFrontPos.x && p.position.y == doubleFrontPos.y);
+    if (!doubleFrontCapture && isPositionValid(piece, doubleFrontPos) && data.moves.filter(m => toRaw(m.piece) == toRaw(piece)).length == 0) {
       result.push(makeMove(piece, doubleFrontPos));
     }
 
-    if (moves.value.length == 0)
+    if (data.moves.length == 0)
       return result;
 
-    const enPassantMove = moves.value[moves.value.length - 1];
+    const enPassantMove = data.moves[data.moves.length - 1];
     if (enPassantMove.piece.type != "pawn")
       return result;
     if (enPassantMove.piece.color == piece.color)
       return result;
-    if (moves.value.filter(m => m.piece == enPassantMove.piece).length > 1)
+    if (data.moves.filter(m => toRaw(m.piece) == toRaw(enPassantMove.piece)).length > 1)
       return result;
     if (enPassantMove.piece.position.y != piece.position.y)
       return result;
@@ -347,7 +356,7 @@ export function useChessGame() {
   }
 
   function isInCheck(color: Color): boolean {
-    const king = pieces.value.find(p => p.type == "king" && p.color == color);
+    const king = data.pieces.find(p => p.type == "king" && p.color == color);
 
     if (king ==  undefined) {
       console.error("king is missing");
@@ -364,8 +373,7 @@ export function useChessGame() {
   }
 
   return {
-    pieces,
-    moves,
+    pieces: screenPieces,
     suggestions,
     turn,
     loadFen,
