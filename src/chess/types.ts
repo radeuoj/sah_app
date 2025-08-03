@@ -22,6 +22,7 @@ export function vec2(x: number, y: number): Vector2 {
 }
 
 export type Piece = {
+  id: string,
   type: PieceType,
   color: Color,
   position: Vector2,
@@ -29,6 +30,7 @@ export type Piece = {
 
 export function makePiece(type: PieceType, color: Color, position: Vector2): Piece {
   return {
+    id: color[0] + type + vec2ToChessNotation(position),
     type,
     color,
     position,
