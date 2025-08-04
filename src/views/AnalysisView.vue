@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { ChessGame } from '@/chess';
-import type { Color, Move, Piece } from '@/chess/types';
+import { Game } from '@/chess/game';
+import type { PieceColor } from '@/chess/piece';
 import ChessBoard from '@/components/ChessBoard.vue';
 import { ref, shallowRef, watch } from 'vue';
 
-const side = ref<Color>("white");
+const side = ref<PieceColor>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-const game = new ChessGame();
+const game = new Game();
 
-watch(fen, () => {
-  game.loadFen(fen.value);
-}, { immediate: true });
+// watch(fen, () => {
+//   game.loadFen(fen.value);
+// }, { immediate: true });
 
 // const check = computed(() => game.isBoardInCheck())
 </script>
@@ -30,7 +30,7 @@ watch(fen, () => {
         <label for="fen">fen</label>
         <input id="fen" v-model="fen" />
       </div>
-      <div>current turn: {{ game.turn }}</div>
+      <!-- <div>current turn: {{ game.turn }}</div> -->
       <!--<div>check: {{ check ?? 'null' }}</div>
       <div><button @click="game.requestUnmove()">unmove</button></div>-->
     </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { vec2 } from '@/chess/types';
+import { vec2 } from '@/chess/vector';
 import useWindowEvent from '@/tools/use_window_event';
 import { ref } from 'vue';
 

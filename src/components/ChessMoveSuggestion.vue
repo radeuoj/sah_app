@@ -1,21 +1,17 @@
 <script setup lang="ts">
-import type { Vector2 } from '@/chess/types';
+import type { Vector2 } from '@/chess/vector';
 import useChessBoardContext from '@/tools/use_chess_board_context';
 import { computed, inject } from 'vue';
 
 const props = defineProps<{
-  position: Vector2,
+  screenPos: Vector2,
   capture: boolean,
 }>();
-
-const { gamePosToScreenPos } = useChessBoardContext();
-
-const screen_pos = computed(() => gamePosToScreenPos(props.position));
 </script>
 
 <template>
   <div class="suggestion" :style="{
-    translate: `${screen_pos.x * 100}% ${screen_pos.y * 100}%`,
+    translate: `${screenPos.x * 100}% ${screenPos.y * 100}%`,
   }">
     <div :class="props.capture ? 'big_circle' : 'small_circle'"></div>
   </div>

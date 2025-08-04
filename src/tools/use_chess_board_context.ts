@@ -1,8 +1,9 @@
-import { type Color, type Vector2 } from "@/chess/types";
+import type { PieceColor } from "@/chess/piece";
+import type { Vector2 } from "@/chess/vector";
 import { inject } from "vue";
 
 export type BoardData = {
-  getSide(): Color,
+  getSide(): PieceColor,
   screenPosToGamePos(pos: Vector2): Vector2,
   gamePosToScreenPos(pos: Vector2): Vector2,
   getBoundingClientRect(): DOMRect,

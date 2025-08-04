@@ -1,25 +1,29 @@
 <script setup lang="ts">
-import { vec2, type Piece, type Vector2 } from '@/chess/types';
+import { numberToVec2, vec2ToNumber } from '@/chess/notation';
+import type { PieceColor, PieceType } from '@/chess/piece';
+import { vec2, type Vector2 } from '@/chess/vector';
 import useChessBoardContext from '@/tools/use_chess_board_context';
 import useWindowEvent from '@/tools/use_window_event';
 import { onUpdated, ref, watch, watchEffect } from 'vue';
 
 const props = defineProps<{
-  piece: Piece,
+  type: PieceType,
+  color: PieceColor,
+  position: number,
 }>();
 
 const board = useChessBoardContext();
 
 const emit = defineEmits<{
   select: [],
-  unselect: [newPos: Vector2],
+  unselect: [newPos: number],
 }>();
 
 const mouse_down = ref(false);
-const screen_pos = ref(board.gamePosToScreenPos(props.piece.position));
+const screen_pos = ref(board.gamePosToScreenPos(numberToVec2(props.position)));
 
-watch([() => props.piece.position, board.getSide], () => {
-  screen_pos.value = board.gamePosToScreenPos(props.piece.position);
+watch([() => props.position, board.getSide], () => {
+  screen_pos.value = board.gamePosToScreenPos(numberToVec2(props.position));
 })
 
 useWindowEvent("mouseup", handleMouseUp);
@@ -35,8 +39,8 @@ function handleMouseUp() {
 
   mouse_down.value = false;
   const gamePos = board.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
-  screen_pos.value = board.gamePosToScreenPos(props.piece.position);
-  emit('unselect', gamePos);
+  screen_pos.value = board.gamePosToScreenPos(numberToVec2(props.position));
+  emit('unselect', vec2ToNumber(gamePos));
 }
 
 function handleMouseMove(event: MouseEvent) {
@@ -51,7 +55,7 @@ function handleMouseMove(event: MouseEvent) {
 </script>
 
 <template>
-  <div class="piece" :class="props.piece.color, props.piece.type, {
+  <div class="piece" :class="props.color, props.type, {
     selected: mouse_down,
   }" @mousedown="handleMouseDown" :style="{
     translate: `${screen_pos.x * 100}% ${screen_pos.y * 100}%`,
