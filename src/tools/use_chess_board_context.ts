@@ -1,4 +1,4 @@
-import type { PieceColor } from "@/chess/piece";
+import type { InternalPieceColor, PieceColor } from "@/chess/piece";
 import type { Vector2 } from "@/chess/vector";
 import { inject } from "vue";
 

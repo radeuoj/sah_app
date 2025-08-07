@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { numberToVec2, vec2ToNumber } from '@/chess/notation';
-import type { PieceColor, PieceType } from '@/chess/piece';
+import type { InternalPieceColor, InternalPieceType, PieceColor, PieceType } from '@/chess/piece';
 import { vec2, type Vector2 } from '@/chess/vector';
 import useChessBoardContext from '@/tools/use_chess_board_context';
 import useWindowEvent from '@/tools/use_window_event';
@@ -74,6 +74,10 @@ function handleMouseMove(event: MouseEvent) {
 
 .selected {
   z-index: 2;
+}
+
+.piece:not(.selected) {
+  transition: translate 0.1s ease-in-out;
 }
 
 .black.king {

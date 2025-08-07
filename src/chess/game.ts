@@ -1,11 +1,46 @@
-import type { Move } from "./move";
+import Stack from "@/tools/stack";
+import type { InternalMove, Move } from "./move";
 import { chessToNumber, numberToChess, numberToVec2, vec2ToNumber } from "./notation";
-import type { Piece, PieceColor, PieceType } from "./piece";
+import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType } from "./piece";
 import { vec2, type Vector2 } from "./vector";
 
+const Directions = {
+  N: 0,
+  S: 1,
+  W: 2,
+  E: 3,
+  NW: 4,
+  NE: 5,
+  SW: 6,
+  SE: 7,
+};
+
+const direction = [ 8, -8, -1, 1, 7, 9, -9, -7];
+const squaresToEdge: number[][] = Array(64).fill(Array(8));
+
+for (let x = 0; x < 8; x++) {
+  for (let y = 0; y < 8; y++) {
+    let north = 7 - y;
+    let south = y;
+    let west = x;
+    let east = 7 - x;
+
+    squaresToEdge[y * 8 + x] = [
+      north,
+      south,
+      west,
+      east,
+      Math.min(north, west),
+      Math.min(north, east),
+      Math.min(south, west),
+      Math.min(south, east),
+    ];
+  }
+}
+
 export class Game {
-  private pieces: Piece[];
-  private board: (Piece | null)[];
+  private board: number[];
+  private moves: InternalMove[];
   private whiteTurn: boolean;
   private castle: {
     whiteKingSide: boolean,
@@ -15,9 +50,22 @@ export class Game {
   };
   private enPassant: number | null;
 
+  private gameStack: Stack<{
+    board: number[],
+    moves: InternalMove[],
+    whiteTurn: boolean,
+    castle: {
+      whiteKingSide: boolean,
+      whiteQueenSide: boolean,
+      blackKingSide: boolean,
+      blackQueenSide: boolean,
+    },
+    enPassant: number | null,
+  }>;
+
   public constructor(fen: string = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
-    this.pieces = []
-    this.board = Array(64).fill(null);
+    this.board = Array(64).fill(0);
+    this.moves = [];
     this.whiteTurn = true;
     this.castle = {
       whiteKingSide: false,
@@ -26,6 +74,8 @@ export class Game {
       blackQueenSide: false,
     };
     this.enPassant = null;
+
+    this.gameStack = new Stack();
 
     this.loadFen(fen);
   }
@@ -41,50 +91,42 @@ export class Game {
       } else if ('1' <= pieces[i] && pieces[i] <= '8') {
         x += +pieces[i];
       } else {
-        let type: PieceType;
+        let type: number;
         switch (pieces[i]) {
           case 'k':
           case 'K':
-            type = "king";
+            type = InternalPieceType.KING;
             break;
           case 'q':
           case 'Q':
-            type = "queen";
+            type = InternalPieceType.QUEEN;
             break;
           case 'r':
           case 'R':
-            type = "rook";
+            type = InternalPieceType.ROOK;
             break;
           case 'n':
           case 'N':
-            type = "knight";
+            type = InternalPieceType.KNIGHT;
             break;
           case 'b':
           case 'B':
-            type = "bishop";
+            type = InternalPieceType.BISHOP;
             break;
           case 'p':
           case 'P':
-            type = "pawn";
+            type = InternalPieceType.PAWN;
             break;
           default:
             throw new Error("Invalid fen")
         }
 
-        const color: PieceColor = pieces[i] == pieces[i].toUpperCase() ? "white" : "black";
-
-        this.pieces.push({
-          type,
-          color,
-          position: 8 * y + x,
-          moves: [],
-        });
+        const color: number = pieces[i] == pieces[i].toUpperCase() ? InternalPieceColor.WHITE : InternalPieceColor.BLACK;
+        this.board[8 * y + x] = color | type | (8 * y + x << 5);
 
         x++;
       }
     }
-    this.loadBoardFromPieces();
-    this.generateMoves();
 
     this.whiteTurn = turn == "w";
 
@@ -99,102 +141,298 @@ export class Game {
 
     if (enPassant != '-')
       this.enPassant = chessToNumber(enPassant);
-  }
-  
-  private loadBoardFromPieces() {
-    this.board = Array(64).fill(null);
-    for (const piece of this.pieces) {
-      this.board[piece.position] = piece;
-    }
-  }
-
-  public export() {
-    return JSON.stringify({
-      pieces: this.pieces,
-    }, null, 2);
-  }
-
-  public isMoveACapture(move: Move): boolean {
-    return this.board[move.to] != null || this.enPassant == move.to;
-  }
-
-  public requestMove(from: number, to: number) {
-    const piece = this.pieces.find(p => p.position == from);
-    if (!piece)
-      throw new Error(`No piece at ${from}`);
-    
-    this.makeMove({ from, to, });
-  }
-
-  private makeMove(move: Move) {
-    const piece = this.pieces.find(p => p.position == move.from);
-    if (!piece)
-      throw new Error(`No piece at ${move.from}`);
-    piece.position = move.to;
-
-    const capture = this.board[move.to];
-    if (capture != null)
-      this.pieces = this.pieces.filter(p => p != this.board[move.to]);
-    this.board[move.to] = piece;
-    this.board[move.from] = null;
 
     this.generateMoves();
   }
 
+  public getMovesFromPos(pos: number): InternalMove[] {
+    return this.moves.filter(m => m.from == pos);
+  }
+
+  public getPieces(): Piece[] {
+    return this.board
+      .map((p, i) => p == 0 ? null : ({
+        id: getPieceId(p),
+        type: getPieceType(p),
+        color: getPieceColor(p),
+        position: i,
+        moves: this.getMovesFromPos(i).map(m => ({
+          from: m.from,
+          to: m.to,
+          promotion: m.promotion == 0 ? null : getPieceType(m.promotion),
+        } satisfies Move)),
+      } satisfies Piece))
+      .filter(p => p != null)
+      .sort((a, b) => a.id - b.id);
+  }
+
+  private getInternalPieceColorFromTurn(): number {
+    return this.whiteTurn ? InternalPieceColor.WHITE : InternalPieceColor.BLACK;
+  }
+
+  public getTurn(): PieceColor {
+    return getPieceColor(this.getInternalPieceColorFromTurn());
+  }
+
+  public getCastlingRights(): string {
+    let result = "";
+
+    if (this.castle.whiteKingSide) result += "K";
+    if (this.castle.whiteQueenSide) result += "Q";
+    if (this.castle.blackKingSide) result += "k";
+    if (this.castle.blackQueenSide) result += "q";
+
+    return result || "-";
+  }
+
+  public getEnPassant(): string {
+    return this.enPassant != null ? numberToChess(this.enPassant) : "-";
+  }
+
+  public getFile(pos: number): number {
+    return pos % 8;
+  }
+
+  public getRank(pos: number): number {
+    return Math.trunc(pos / 8);
+  }
+
+  private stackCurrentState() {
+    this.gameStack.push({
+      board: [...this.board],
+      moves: [...this.moves],
+      whiteTurn: this.whiteTurn,
+      castle: {...this.castle},
+      enPassant: this.enPassant,
+    });
+  }
+
+  private updateCurrentStateFromStack() {
+    const state = this.gameStack.pop();
+
+    this.board = state.board;
+    this.moves = state.moves;
+    this.whiteTurn = state.whiteTurn;
+    this.castle = state.castle;
+    this.enPassant = state.enPassant;
+  }
+
+  public requestMove(move: Move) {
+    const piece = this.board[move.from];
+    if (!piece)
+      throw new Error(`No piece at ${move.from}`);
+    
+    const promotion = move.promotion == null ? 0 :
+      Object.values(InternalPieceType)[Object.keys(InternalPieceType).map(k => k.toLowerCase()).indexOf(move.promotion)];
+
+    const internalMove = this.moves.find(m => m.from == move.from && m.to == move.to && m.promotion == promotion);
+    if (!internalMove)
+      throw new Error(`No move from ${move.from} to ${move.to}`);
+    
+    this.makeMove(internalMove);
+  }
+
+  public requestUnmove() {
+    this.undoMove();
+  }
+
+  private makeMove(move: InternalMove) {
+    const piece = this.board[move.from];
+    if (!piece)
+      throw new Error(`No piece at ${move.from}`);
+    
+    this.stackCurrentState();
+
+    const type = getInternalPieceType(piece);
+    const color = getInternalPieceColor(piece);
+
+    this.board[move.to] = piece;
+    this.board[move.from] = 0;
+
+    // en passant
+    const isThisEnPassant = type == InternalPieceType.PAWN && move.to == this.enPassant;
+    if (isThisEnPassant) {
+      this.board[move.to + direction[color == InternalPieceColor.WHITE ? Directions.S : Directions.N]] = 0;
+    }
+
+    const canThisBeEnPassant = type == InternalPieceType.PAWN && Math.abs(move.to - move.from) == 16;
+    this.enPassant = canThisBeEnPassant ? move.from + (color == InternalPieceColor.WHITE ? 8 : -8) : null;
+
+    // promotion
+    if (move.promotion != 0) {
+      this.board[move.to] &= 0b11000;
+      this.board[move.to] |= move.promotion;
+    }
+
+    this.whiteTurn = !this.whiteTurn;
+    this.generateMoves();
+  }
+
+  private undoMove() {
+    this.updateCurrentStateFromStack();
+  }
+
   private generateMoves() {
-    for (const piece of this.pieces) {
-      piece.moves = this.generatePieceMoves(piece);
+    this.generatePseudoMoves();
+  }
+
+  private generatePseudoMoves() {
+    this.moves = [];
+
+    for (let i = 0; i < 64; i++) {
+      const piece = this.board[i];
+
+      if (this.getInternalPieceColorFromTurn() == getInternalPieceColor(piece)) {
+        switch (getInternalPieceType(piece)) {
+          case InternalPieceType.KING:
+            this.generateKingMoves(i);
+            break;
+          case InternalPieceType.QUEEN:
+          case InternalPieceType.ROOK:
+          case InternalPieceType.BISHOP:
+            this.generateSlidingMoves(i);
+            break;
+          case InternalPieceType.KNIGHT:
+            this.generateKnightMoves(i);
+            break;
+          case InternalPieceType.PAWN:
+            this.generatePawnMoves(i);
+            break;
+        }
+      }
     }
   }
 
-  private generatePieceMoves(piece: Piece): Move[] {
-    switch (piece.type) {
-      case "king": return this.generateKingMoves(piece);
-      case "queen": return this.generateQueenMoves(piece);
-      case "rook": return this.generateRookMoves(piece);
-      case "knight": return this.generateKnightMoves(piece);
-      case "bishop": return this.generateBishopMoves(piece);
-      case "pawn": return this.generatePawnMoves(piece);
+  /**
+   * Returns false if the move was a capture or friendly piece
+   */
+  private addMoveIfGood(move: InternalMove): boolean {
+    const piece = this.board[move.from];
+    const capture = this.board[move.to];
+
+    if (getInternalPieceColor(capture) == getInternalPieceColor(piece)) {
+      return false;
+    }
+
+    this.moves.push(move);
+
+    if (capture != 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  private generateSlidingMoves(pos: number) {
+    const piece = this.board[pos];
+
+    const startDirIndex = getInternalPieceType(piece) == InternalPieceType.ROOK
+      || getInternalPieceType(piece) == InternalPieceType.QUEEN ? 0 : 4;
+    const endDirIndex = getInternalPieceType(piece) == InternalPieceType.BISHOP
+      || getInternalPieceType(piece) == InternalPieceType.QUEEN ? 8 : 4;
+
+    for (let dirIndex = startDirIndex; dirIndex < endDirIndex; dirIndex++) {
+      for (let i = 0; i < squaresToEdge[pos][dirIndex]; i++) {
+
+        const target = pos + direction[dirIndex] * (i + 1);
+        if (!this.addMoveIfGood({ from: pos, to: target, promotion: 0 })) {
+          break;
+        }
+      }
     }
   }
 
-  private isPositionValid(piece: Piece, { x, y }: Vector2): boolean {
-    return x <= 7 && x >= 0 && y <= 7 && y >= 0 && (this.board[y * 8 + x] == null || this.board[y * 8 + x]?.color != piece.color);
+  private generateKingMoves(pos: number) {
+    for (let dirIndex = 0; dirIndex < 8; dirIndex++) {
+      if (squaresToEdge[pos][dirIndex] < 1)
+        continue;
+
+      const target = pos + direction[dirIndex];
+      if (!this.addMoveIfGood({ from: pos, to: target, promotion: 0 })) {
+        continue;
+      }
+    }
   }
 
-  private generateKingMoves(piece: Piece): Move[] {
-    const result: Move[] = [];
-    const { x, y } = numberToVec2(piece.position);
+  private generateKnightMoves(pos: number) {
+    //  2 * dir x + dir y
+    const dir = [
+      [Directions.N, Directions.W],
+      [Directions.N, Directions.E],
+      [Directions.S, Directions.W],
+      [Directions.S, Directions.E],
+      [Directions.W, Directions.N],
+      [Directions.W, Directions.S],
+      [Directions.E, Directions.N],
+      [Directions.E, Directions.S],
+    ];
 
-    if (this.isPositionValid(piece, vec2(x, y + 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x, y + 1)) });
-    if (this.isPositionValid(piece, vec2(x, y - 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x, y - 1)) });
-    if (this.isPositionValid(piece, vec2(x + 1, y))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x + 1, y)) });
-    if (this.isPositionValid(piece, vec2(x - 1, y))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x - 1, y)) });
-    if (this.isPositionValid(piece, vec2(x + 1, y + 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x + 1, y + 1)) });
-    if (this.isPositionValid(piece, vec2(x - 1, y + 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x - 1, y + 1)) });
-    if (this.isPositionValid(piece, vec2(x + 1, y - 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x + 1, y - 1)) });
-    if (this.isPositionValid(piece, vec2(x - 1, y - 1))) result.push({ from: piece.position, to: vec2ToNumber(vec2(x - 1, y - 1)) });
+    for (const mv of dir) {
+      if (squaresToEdge[pos][mv[0]] < 2 || squaresToEdge[pos][mv[1]] < 1)
+        continue;
 
-    return result;
+      this.addMoveIfGood({
+        from: pos,
+        to: pos + direction[mv[0]] * 2 + direction[mv[1]],
+        promotion: 0,
+      });
+    }
   }
 
-  private generateQueenMoves(piece: Piece): Move[] {
-    
-  }
+  private generatePawnMoves(pos: number) {
+    const piece = this.board[pos];
+    const color = getInternalPieceColor(piece);
+    const dir = color == InternalPieceColor.WHITE ? Directions.N : Directions.S;
+    const isOnStartingSquare = this.getRank(pos) == (color == InternalPieceColor.WHITE ? 1 : 6); 
+    const promotion = this.getRank(pos) == (color == InternalPieceColor.WHITE ? 6 : 1);
 
-  private generateRookMoves(piece: Piece): Move[] {
-    
-  }
+    // forwards
+    for (let i = 0; i < 1 + +isOnStartingSquare; i++) {
+      const target = pos + direction[dir] * (i + 1);
+      const capture = this.board[target];
 
-  private generateKnightMoves(piece: Piece): Move[] {
-    
-  }
+      if (capture != 0)
+        break;
 
-  private generateBishopMoves(piece: Piece): Move[] {
-    
-  }
+      if (!promotion) {
+        this.moves.push({
+          from: pos,
+          to: target,
+          promotion: 0,
+        });
+      } else {
+        for (let type = InternalPieceType.QUEEN; type <= InternalPieceType.BISHOP; type++) {
+          this.moves.push({
+            from: pos,
+            to: target,
+            promotion: type,
+          });
+        }
+      }
+    }
 
-  private generatePawnMoves(piece: Piece): Move[] {
-    
+    // captures
+    for (let i = Directions.W; i <= Directions.E; i++) {
+      const target = pos + direction[dir] + direction[i];
+      const capture = this.board[target];
+
+      if ((capture != 0 && getInternalPieceColor(capture) != color) || target == this.enPassant) {
+        if (!promotion) {
+          this.moves.push({
+            from: pos,
+            to: target,
+            promotion: 0,
+          });
+        } else {
+          for (let type = InternalPieceType.QUEEN; type <= InternalPieceType.BISHOP; type++) {
+            this.moves.push({
+              from: pos,
+              to: target,
+              promotion: type,
+            });
+          }
+        }
+      }
+    }
   }
 }
