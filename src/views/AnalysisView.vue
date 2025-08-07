@@ -7,6 +7,7 @@ import { ref, shallowRef, watch } from 'vue';
 
 const side = ref<PieceColor>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+const perftDepth = ref(1);
 
 let game = new Game(fen.value);
 const pieces = ref<Piece[]>(game.getPieces());
@@ -26,6 +27,15 @@ function handleMove(move: Move) {
 function handleUnmove() {
   game.requestUnmove();
   pieces.value = game.getPieces();
+}
+
+function handlePerft() {
+  const start = Date.now();
+  console.log("Started...");
+  const result = game.perft(perftDepth.value).sort((a, b) =>(a.move < b.move ? -1 : 1));
+  console.log(result);
+  console.log(`Total: ${result.reduce((total, n) => total + n.nodes, 0)}`);
+  console.log(`Took ${(Date.now() - start) / 1000}s`);
 }
 </script>
 
@@ -48,6 +58,7 @@ function handleUnmove() {
       <div>en passant: {{ game.getEnPassant() }}</div>
       <!--<div>check: {{ check ?? 'null' }}</div> -->
       <div><button @click="handleUnmove">unmove</button></div>
+      <div><input v-model="perftDepth"></input><button @click="handlePerft">perft</button></div>
     </div>
     <div class="center">
       <ChessBoard :pieces :side @move="handleMove" />

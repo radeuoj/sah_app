@@ -142,7 +142,8 @@ export class Game {
     if (enPassant != '-')
       this.enPassant = chessToNumber(enPassant);
 
-    this.generateMoves();
+    this.generatePseudoMoves();
+    this.validateMoves();
   }
 
   public getMovesFromPos(pos: number): InternalMove[] {
@@ -230,13 +231,14 @@ export class Game {
       throw new Error(`No move from ${move.from} to ${move.to}`);
     
     this.makeMove(internalMove);
+    this.validateMoves();
   }
 
   public requestUnmove() {
     this.undoMove();
   }
 
-  private makeMove(move: InternalMove) {
+  private makeMove(move: InternalMove): boolean {
     const piece = this.board[move.from];
     if (!piece)
       throw new Error(`No piece at ${move.from}`);
@@ -265,15 +267,55 @@ export class Game {
     }
 
     this.whiteTurn = !this.whiteTurn;
-    this.generateMoves();
+    this.generatePseudoMoves();
+
+    const oppositeKing = this.board.findIndex(p => getInternalPieceType(p) == InternalPieceType.KING 
+      && getInternalPieceColor(p) == (this.whiteTurn ? InternalPieceColor.BLACK : InternalPieceColor.WHITE));
+    for (const move of this.moves) {
+      if (move.to == oppositeKing) {
+        this.undoMove();
+        return false;
+      }
+    }
+
+    return true;
   }
 
   private undoMove() {
     this.updateCurrentStateFromStack();
   }
 
-  private generateMoves() {
-    this.generatePseudoMoves();
+  public perft(depth: number): {
+    move: string,
+    nodes: number,
+  }[] {
+    if (depth == 0) 
+      return [];
+
+    const result: {
+      move: string,
+      nodes: number,
+    }[] = [];
+
+    for (const move of this.moves) {
+      this.makeMove(move);
+      this.validateMoves();
+      result.push({
+        move: numberToChess(move.from) + numberToChess(move.to) + move.promotion.toString(),
+        nodes: this.perft(depth - 1).reduce((total, n) => total + n.nodes, 0) + +(depth == 1),
+      })
+      this.undoMove();
+    }
+
+    return result;
+  }
+
+  private validateMoves() {
+    this.moves = this.moves.filter(m => {
+      const ok = this.makeMove(m);
+      if (ok) this.undoMove();
+      return ok;
+    });
   }
 
   private generatePseudoMoves() {
@@ -413,6 +455,9 @@ export class Game {
 
     // captures
     for (let i = Directions.W; i <= Directions.E; i++) {
+      if (squaresToEdge[pos][i] < 1)
+        continue;
+
       const target = pos + direction[dir] + direction[i];
       const capture = this.board[target];
 
