@@ -1,4 +1,5 @@
-import type { PieceType } from "./piece"
+import type { Square } from "./notation"
+import type { PromotionPieceType } from "./piece"
 
 export type InternalMove = {
   from: number,
@@ -7,7 +8,7 @@ export type InternalMove = {
 }
 
 export type Move = {
-  from: number,
-  to: number,
-  promotion: PieceType | null,
+  from: Square,
+  to: Square,
+  promotion: PromotionPieceType | null,
 }

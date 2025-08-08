@@ -1,11 +1,12 @@
+import type { Square } from "@/chess/notation";
 import type { InternalPieceColor, PieceColor } from "@/chess/piece";
 import type { Vector2 } from "@/chess/vector";
 import { inject } from "vue";
 
 export type BoardData = {
   getSide(): PieceColor,
-  screenPosToGamePos(pos: Vector2): Vector2,
-  gamePosToScreenPos(pos: Vector2): Vector2,
+  screenPosToGamePos(pos: Vector2): Square,
+  gamePosToScreenPos(pos: Square): Vector2,
   getBoundingClientRect(): DOMRect,
 }
 

@@ -8,13 +8,14 @@ import type { BoardData } from '@/tools/use_chess_board_context';
 import type { Game } from '@/chess/game';
 import type { Piece, InternalPieceColor, InternalPieceType, PieceColor, PieceType } from '@/chess/piece';
 import { vec2, type Vector2 } from '@/chess/vector';
-import { chessToVec2, numberToChess, vec2ToChess, numberToVec2 } from '@/chess/notation';
+import { chessToVec2, numberToChess, vec2ToChess, numberToVec2, type Square } from '@/chess/notation';
 import type { Move } from '@/chess/move';
 
 const props = defineProps<{
-  // game: Game,
-  pieces: Piece[],
   side: PieceColor,
+  pieces: Piece[],
+  enPasant: string | null,
+  promotion: "queen" | "rook" | "bishop" | "knight",
 }>();
 
 // const pieces = ref<Piece[]>(getUpdatedPieces());
@@ -32,31 +33,30 @@ const emit = defineEmits<{
   move: [move: Move],
 }>();
 
-function screenPosToGamePos(pos: Vector2): Vector2 {
-  if (props.side == "white") return vec2(pos.x, 7 - pos.y);
-  else return vec2(7 - pos.x, pos.y);
+function screenPosToGamePos(pos: Vector2): Square {
+  if (props.side == "white") return vec2ToChess(vec2(pos.x, 7 - pos.y));
+  else return vec2ToChess(vec2(7 - pos.x, pos.y));
 }
 
-function gamePosToScreenPos(pos: Vector2): Vector2 {
-  if (props.side == "white") return vec2(pos.x, 7 - pos.y);
-  else return vec2(7 - pos.x, pos.y);
+function gamePosToScreenPos(pos: Square): Vector2 {
+  const vecPos = chessToVec2(pos);
+  if (props.side == "white") return vec2(vecPos.x, 7 - vecPos.y);
+  else return vec2(7 - vecPos.x, vecPos.y);
 }
 
-function handlePieceUnselect(piece: Piece, newPos: number) {
+function handlePieceUnselect(piece: Piece, newPos: Square) {
   const start = Date.now();
 
   selectedPiece.value = null;
 
-  const move = piece.moves.find(m => m.to == newPos && (m.promotion == null || m.promotion == "queen"));
+  const move = piece.moves.find(m => m.to == newPos && (m.promotion == null || m.promotion == props.promotion));
   if (!move) {
     return;
   }
 
   emit("move", move);
-  // props.game.requestMove(move);
-  // pieces.value = getUpdatedPieces();
 
-  console.log(`${numberToChess(piece.position)}${numberToChess(newPos)} took ${Date.now() - start}ms`);
+  console.log(`${piece.position}${newPos} took ${Date.now() - start}ms`);
 }
 </script>
 
@@ -65,12 +65,12 @@ function handlePieceUnselect(piece: Piece, newPos: number) {
     <!-- Square info -->
     <div class="files">
       <div class="square" :class="i % 2 == 1 ? 'black' : 'white'" v-for="i in 8">
-        <div>{{ "abcdefgh"[screenPosToGamePos(vec2(i - 1, 0)).x] }}</div>
+        <div>{{ screenPosToGamePos(vec2(i - 1, 0))[0] }}</div>
       </div>
     </div>
     <div class="ranks">
       <div class="square" :class="i % 2 == 1 ? 'white' : 'black'" v-for="i in 8">
-        <div>{{ screenPosToGamePos(vec2(0, i - 1)).y + 1 }}</div>
+        <div>{{ screenPosToGamePos(vec2(0, i - 1))[1] }}</div>
       </div>
     </div>
 
@@ -81,14 +81,16 @@ function handlePieceUnselect(piece: Piece, newPos: number) {
     <ChessPiece v-for="piece of pieces" :key="piece.id" :type="piece.type" :color="piece.color" :position="piece.position" @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
 
     <!-- Move suggestions -->
-    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == 'queen')" :screen-pos="gamePosToScreenPos(numberToVec2(move.to))" :capture="pieces.find(p => p.position == move.to) != undefined" />
+    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == props.promotion)" :screen-pos="gamePosToScreenPos(move.to)" :capture="pieces.find(p => p.position == move.to) != undefined || move.to == props.enPasant" />
   </div>
 </template>
 
 <style scoped>
 .board {
+  max-width: 100%;
   width: var(--chess-board-size);
   height: var(--chess-board-size);
+  /* margin-top: var(--chess-board-margin); */
   background-image: url(/assets/chess_board_big.png); /* magick chess_board.png -filter box -resize 2048x2048 chess_board_big.png */
   background-size: 100%;
   
@@ -98,6 +100,8 @@ function handlePieceUnselect(piece: Piece, newPos: number) {
   grid-template-rows: repeat(8, 1fr);
 
   user-select: none;
+  touch-action: none;
+  overflow: hidden;
 }
 
 .square {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { numberToVec2, vec2ToNumber } from '@/chess/notation';
+import { numberToVec2, vec2ToNumber, type Square } from '@/chess/notation';
 import type { InternalPieceColor, InternalPieceType, PieceColor, PieceType } from '@/chess/piece';
 import { vec2, type Vector2 } from '@/chess/vector';
 import useChessBoardContext from '@/tools/use_chess_board_context';
@@ -9,25 +9,27 @@ import { onUpdated, ref, watch, watchEffect } from 'vue';
 const props = defineProps<{
   type: PieceType,
   color: PieceColor,
-  position: number,
+  position: Square,
 }>();
 
 const board = useChessBoardContext();
 
 const emit = defineEmits<{
   select: [],
-  unselect: [newPos: number],
+  unselect: [newPos: Square],
 }>();
 
 const mouse_down = ref(false);
-const screen_pos = ref(board.gamePosToScreenPos(numberToVec2(props.position)));
+const screen_pos = ref(board.gamePosToScreenPos(props.position));
 
 watch([() => props.position, board.getSide], () => {
-  screen_pos.value = board.gamePosToScreenPos(numberToVec2(props.position));
+  screen_pos.value = board.gamePosToScreenPos(props.position);
 })
 
 useWindowEvent("mouseup", handleMouseUp);
 useWindowEvent("mousemove", handleMouseMove);
+useWindowEvent("touchend", handleMouseUp)
+useWindowEvent("touchmove", handleMouseMove)
 
 function handleMouseDown() {
   mouse_down.value = true;
@@ -39,16 +41,19 @@ function handleMouseUp() {
 
   mouse_down.value = false;
   const gamePos = board.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
-  screen_pos.value = board.gamePosToScreenPos(numberToVec2(props.position));
-  emit('unselect', vec2ToNumber(gamePos));
+  screen_pos.value = board.gamePosToScreenPos(props.position);
+  emit('unselect', gamePos);
 }
 
-function handleMouseMove(event: MouseEvent) {
+function handleMouseMove(event: MouseEvent | TouchEvent) {
   if (!mouse_down.value) return;
 
+  event.preventDefault();
+  event.stopPropagation();
+
   const rect = board.getBoundingClientRect();
-  const x = (event.clientX - rect.x) / rect.width * 8;
-  const y = (event.clientY - rect.y) / rect.height * 8;
+  const x = (("clientX" in event ? event : event.touches[0]).clientX - rect.x) / rect.width * 8;
+  const y = (("clientY" in event ? event : event.touches[0]).clientY - rect.y) / rect.height * 8;
 
   screen_pos.value = vec2(x - 0.5, y - 0.5);
 }
@@ -57,7 +62,7 @@ function handleMouseMove(event: MouseEvent) {
 <template>
   <div class="piece" :class="props.color, props.type, {
     selected: mouse_down,
-  }" @mousedown="handleMouseDown" :style="{
+  }" @mousedown="handleMouseDown" @touchstart="handleMouseDown" :style="{
     translate: `${screen_pos.x * 100}% ${screen_pos.y * 100}%`,
   }"></div>
 </template>

@@ -1,4 +1,5 @@
 import type { InternalMove, Move } from "./move";
+import type { Square } from "./notation";
 
 export const InternalPieceType = {
   KING: 1,
@@ -16,12 +17,13 @@ export const InternalPieceColor = {
 
 export type PieceColor = "white" | "black";
 export type PieceType = "king" | "queen" | "rook" | "knight" | "bishop" | "pawn";
+export type PromotionPieceType = "queen" | "rook" | "knight" | "bishop"; 
 
 export type Piece = {
   id: number,
   type: PieceType,
   color: PieceColor,
-  position: number,
+  position: Square,
   moves: Move[],
 };
 

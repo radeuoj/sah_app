@@ -8,6 +8,7 @@ import { ref, shallowRef, watch } from 'vue';
 const side = ref<PieceColor>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 const perftDepth = ref(1);
+const promotion = ref<"queen" | "rook" | "bishop" | "knight">("queen");
 
 let game = new Game(fen.value);
 const pieces = ref<Piece[]>(game.getPieces());
@@ -42,6 +43,12 @@ function handlePerft() {
 <template>
   <div class="game">
     <div class="left">
+      
+    </div>
+    <div class="center">
+      <ChessBoard :side :pieces :en-pasant="game.getEnPassant()" :promotion @move="handleMove" />
+    </div>
+    <div class="right">
       <div>
         <label for="side">side</label>
         <select id="side" v-model="side">
@@ -55,37 +62,52 @@ function handlePerft() {
       </div>
       <div>current turn: {{ game.getTurn() }}</div>
       <div>castling rights: {{ game.getCastlingRights() }}</div>
-      <div>en passant: {{ game.getEnPassant() }}</div>
+      <div>en passant: {{ game.getEnPassant() ?? '-' }}</div>
+      <div>
+        <label for="promotion">preferred promotion</label>
+        <select id="promotion" v-model="promotion">
+          <option value="queen">queen</option>
+          <option value="rook">rook</option>
+          <option value="bishop">bishop</option>
+          <option value="knight">knight</option>
+        </select>
+      </div>
       <!--<div>check: {{ check ?? 'null' }}</div> -->
       <div><button @click="handleUnmove">unmove</button></div>
       <div><input v-model="perftDepth"></input><button @click="handlePerft">perft</button></div>
     </div>
-    <div class="center">
-      <ChessBoard :pieces :side @move="handleMove" />
-    </div>
-    <div class="right"></div>
   </div>
 </template>
 
 <style scoped>
 .game {
-  height: 100vh;
-  width: 100vw;
-
   display: flex;
-  overflow: hidden;
 }
 
 .left, .right {
   flex: 1;
-  height: 100%;
+}
+
+.right {
+  min-width: 220px;
 }
 
 .center {
-  height: 100%;
+  /* height: 100svh; */
+  padding-top: var(--chess-board-margin);
 
   display: flex;
   justify-content: center;
   align-items: center;
+}
+
+@media (width <= 900px) {
+  .game {
+    flex-direction: column;
+  }
+
+  .right {
+    min-width: auto;
+  }
 }
 </style>

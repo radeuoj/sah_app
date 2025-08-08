@@ -1,7 +1,7 @@
 import Stack from "@/tools/stack";
 import type { InternalMove, Move } from "./move";
-import { chessToNumber, numberToChess, numberToVec2, vec2ToNumber } from "./notation";
-import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType } from "./piece";
+import { chessToNumber, numberToChess, numberToVec2, vec2ToNumber, type Square } from "./notation";
+import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType, type PromotionPieceType } from "./piece";
 import { vec2, type Vector2 } from "./vector";
 
 const Directions = {
@@ -140,13 +140,13 @@ export class Game {
     }
 
     if (enPassant != '-')
-      this.enPassant = chessToNumber(enPassant);
+      this.enPassant = chessToNumber(enPassant as Square);
 
     this.generatePseudoMoves();
     this.validateMoves();
   }
 
-  public getMovesFromPos(pos: number): InternalMove[] {
+  private getMovesFromPos(pos: number): InternalMove[] {
     return this.moves.filter(m => m.from == pos);
   }
 
@@ -156,11 +156,11 @@ export class Game {
         id: getPieceId(p),
         type: getPieceType(p),
         color: getPieceColor(p),
-        position: i,
+        position: numberToChess(i),
         moves: this.getMovesFromPos(i).map(m => ({
-          from: m.from,
-          to: m.to,
-          promotion: m.promotion == 0 ? null : getPieceType(m.promotion),
+          from: numberToChess(m.from),
+          to: numberToChess(m.to),
+          promotion: m.promotion == 0 ? null : getPieceType(m.promotion) as PromotionPieceType,
         } satisfies Move)),
       } satisfies Piece))
       .filter(p => p != null)
@@ -186,8 +186,8 @@ export class Game {
     return result || "-";
   }
 
-  public getEnPassant(): string {
-    return this.enPassant != null ? numberToChess(this.enPassant) : "-";
+  public getEnPassant(): string | null {
+    return this.enPassant != null ? numberToChess(this.enPassant) : null;
   }
 
   public getFile(pos: number): number {
@@ -219,14 +219,17 @@ export class Game {
   }
 
   public requestMove(move: Move) {
-    const piece = this.board[move.from];
+    const from = chessToNumber(move.from);
+    const to = chessToNumber(move.to);
+
+    const piece = this.board[from];
     if (!piece)
       throw new Error(`No piece at ${move.from}`);
     
     const promotion = move.promotion == null ? 0 :
       Object.values(InternalPieceType)[Object.keys(InternalPieceType).map(k => k.toLowerCase()).indexOf(move.promotion)];
 
-    const internalMove = this.moves.find(m => m.from == move.from && m.to == move.to && m.promotion == promotion);
+    const internalMove = this.moves.find(m => m.from == from && m.to == to && m.promotion == promotion);
     if (!internalMove)
       throw new Error(`No move from ${move.from} to ${move.to}`);
     
@@ -365,7 +368,7 @@ export class Game {
       this.makeMove(move);
       this.validateMoves();
       result.push({
-        move: numberToChess(move.from) + numberToChess(move.to) + move.promotion.toString(),
+        move: numberToChess(move.from) + numberToChess(move.to) + (Object.keys(InternalPieceType)[Object.values(InternalPieceType).indexOf(move.promotion)]?.toLowerCase()[0] ?? ''),
         nodes: this.perft(depth - 1).reduce((total, n) => total + n.nodes, 0) + +(depth == 1),
       })
       this.undoMove();
