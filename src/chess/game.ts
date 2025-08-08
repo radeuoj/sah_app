@@ -266,16 +266,61 @@ export class Game {
       this.board[move.to] |= move.promotion;
     }
 
+    // castle
+    const hasCastled = type == InternalPieceType.KING && Math.abs(move.to - move.from) == 2;
+    const castleDir = (move.to - move.from) / 2;
+    if (hasCastled) {
+      const rookPos = (this.whiteTurn ? 0 : 7) * 8 + (castleDir == 1 ? 7 : 0);
+      const rook = this.board[rookPos];
+      this.board[move.to - castleDir] = rook;
+      this.board[rookPos] = 0;
+    }
+
+    // castling rights
+    if (type == InternalPieceType.KING) {
+      if (this.whiteTurn) {
+        this.castle.whiteKingSide = false;
+        this.castle.whiteQueenSide = false;
+      } else {
+        this.castle.blackKingSide = false;
+        this.castle.blackQueenSide = false;
+      }
+    } else if (type == InternalPieceType.ROOK) {
+      if (this.whiteTurn) {
+        if (move.from == 7) {
+          this.castle.whiteKingSide = false;
+        } else if (move.from == 0) {
+          this.castle.whiteQueenSide = false;
+        }
+      } else {
+        if (move.from == 63) {
+          this.castle.blackKingSide = false;
+        } else if (move.from == 56) {
+          this.castle.blackQueenSide = false;
+        }
+      }
+    }
+
     this.whiteTurn = !this.whiteTurn;
     this.generatePseudoMoves();
 
+    // check validation
+    const attackedSquares: boolean[] = Array(64).fill(false);
+    for (const move of this.moves) {
+      attackedSquares[move.to] = true;
+    }
+
     const oppositeKing = this.board.findIndex(p => getInternalPieceType(p) == InternalPieceType.KING 
       && getInternalPieceColor(p) == (this.whiteTurn ? InternalPieceColor.BLACK : InternalPieceColor.WHITE));
-    for (const move of this.moves) {
-      if (move.to == oppositeKing) {
-        this.undoMove();
-        return false;
-      }
+    if (attackedSquares[oppositeKing]) {
+      this.undoMove();
+      return false;
+    }
+
+    // castling validation
+    if (hasCastled && (attackedSquares[move.from] || attackedSquares[move.from + castleDir])) {
+      this.undoMove();
+      return false;
     }
 
     return true;
@@ -312,6 +357,10 @@ export class Game {
 
   private validateMoves() {
     this.moves = this.moves.filter(m => {
+      const color = getInternalPieceColor(this.board[m.from]);
+      if (color != (this.whiteTurn ? InternalPieceColor.WHITE : InternalPieceColor.BLACK))
+        return false;
+
       const ok = this.makeMove(m);
       if (ok) this.undoMove();
       return ok;
@@ -323,24 +372,25 @@ export class Game {
 
     for (let i = 0; i < 64; i++) {
       const piece = this.board[i];
+      if (this.getInternalPieceColorFromTurn() != getInternalPieceColor(piece)) {
+        continue;
+      }
 
-      if (this.getInternalPieceColorFromTurn() == getInternalPieceColor(piece)) {
-        switch (getInternalPieceType(piece)) {
-          case InternalPieceType.KING:
-            this.generateKingMoves(i);
-            break;
-          case InternalPieceType.QUEEN:
-          case InternalPieceType.ROOK:
-          case InternalPieceType.BISHOP:
-            this.generateSlidingMoves(i);
-            break;
-          case InternalPieceType.KNIGHT:
-            this.generateKnightMoves(i);
-            break;
-          case InternalPieceType.PAWN:
-            this.generatePawnMoves(i);
-            break;
-        }
+      switch (getInternalPieceType(piece)) {
+        case InternalPieceType.KING:
+          this.generateKingMoves(i);
+          break;
+        case InternalPieceType.QUEEN:
+        case InternalPieceType.ROOK:
+        case InternalPieceType.BISHOP:
+          this.generateSlidingMoves(i);
+          break;
+        case InternalPieceType.KNIGHT:
+          this.generateKnightMoves(i);
+          break;
+        case InternalPieceType.PAWN:
+          this.generatePawnMoves(i);
+          break;
       }
     }
   }
@@ -394,6 +444,33 @@ export class Game {
         continue;
       }
     }
+
+    this.generateCastleMoves(pos, "king");
+    this.generateCastleMoves(pos, "queen");
+  }
+
+  private generateCastleMoves(pos: number, side: "king" | "queen") {
+    const piece = this.board[pos];
+    const color = getInternalPieceColor(piece);
+
+    if (color == InternalPieceColor.WHITE && side == "king" && !this.castle.whiteKingSide)
+      return;
+    if (color == InternalPieceColor.WHITE && side == "queen" && !this.castle.whiteQueenSide)
+      return;
+    if (color == InternalPieceColor.BLACK && side == "king" && !this.castle.blackKingSide)
+      return;
+    if (color == InternalPieceColor.BLACK && side == "queen" && !this.castle.blackQueenSide)
+      return;
+
+    const dir = side == "king" ? 1 : -1;
+    if (this.board[pos + dir] != 0 || this.board[pos + 2 * dir] != 0)
+      return;
+
+    this.addMoveIfGood({
+      from: pos,
+      to: pos + dir * 2,
+      promotion: 0,
+    });
   }
 
   private generateKnightMoves(pos: number) {
