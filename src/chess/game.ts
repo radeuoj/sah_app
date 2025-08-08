@@ -248,6 +248,9 @@ export class Game {
     const type = getInternalPieceType(piece);
     const color = getInternalPieceColor(piece);
 
+    const capture = this.board[move.to];
+    const captureType = getInternalPieceType(capture);
+
     this.board[move.to] = piece;
     this.board[move.from] = 0;
 
@@ -297,6 +300,22 @@ export class Game {
           this.castle.blackKingSide = false;
         } else if (move.from == 56) {
           this.castle.blackQueenSide = false;
+        }
+      }
+    }
+
+    if (captureType == InternalPieceType.ROOK) {
+      if (this.whiteTurn) {
+        if (move.to == 63) {
+          this.castle.blackKingSide = false;
+        } else if (move.to == 56) {
+          this.castle.blackQueenSide = false;
+        }
+      } else {
+        if (move.to == 7) {
+          this.castle.whiteKingSide = false;
+        } else if (move.to == 0) {
+          this.castle.whiteQueenSide = false;
         }
       }
     }
@@ -463,7 +482,7 @@ export class Game {
       return;
 
     const dir = side == "king" ? 1 : -1;
-    if (this.board[pos + dir] != 0 || this.board[pos + 2 * dir] != 0)
+    if (this.board[pos + dir] != 0 || this.board[pos + 2 * dir] != 0 || (side == "queen" && this.board[pos + 3 * dir] != 0))
       return;
 
     this.addMoveIfGood({
