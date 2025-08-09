@@ -84,4 +84,14 @@ function handleMove(move: Move) {
   justify-content: center;
   align-items: center;
 }
+
+@media (width <= 900px) {
+  .game {
+    flex-direction: column;
+  }
+
+  .right {
+    min-width: auto;
+  }
+}
 </style>
