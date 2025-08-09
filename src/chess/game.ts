@@ -275,7 +275,7 @@ export class Game {
 
     // promotion
     if (move.promotion != 0) {
-      this.board[move.to] &= 0b11000;
+      this.board[move.to] &= 0b11111111000;
       this.board[move.to] |= move.promotion;
     }
 
