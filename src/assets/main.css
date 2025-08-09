@@ -3,6 +3,8 @@
   --chess-board-margin: min(calc((100svh - var(--chess-board-size)) / 2), 10000px);
   --chess-square-black-color: #8A2D3B;
   --chess-square-white-color: #FBDB93;
+  --chess-square-black-highlight-color: #b6b454;
+  --chess-square-white-highlight-color: #e0df7d;
 }
 
 body {

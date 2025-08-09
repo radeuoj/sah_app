@@ -10,6 +10,7 @@ const props = defineProps<{
   type: PieceType,
   color: PieceColor,
   position: Square,
+  canMove: boolean,
 }>();
 
 const board = useChessBoardContext();
@@ -20,10 +21,10 @@ const emit = defineEmits<{
 }>();
 
 const mouse_down = ref(false);
-const screen_pos = ref(board.gamePosToScreenPos(props.position));
+const screenPos = ref(board.gamePosToScreenPos(props.position));
 
 watch([() => props.position, board.getSide], () => {
-  screen_pos.value = board.gamePosToScreenPos(props.position);
+  screenPos.value = board.gamePosToScreenPos(props.position);
 })
 
 useWindowEvent("mouseup", handleMouseUp);
@@ -32,6 +33,8 @@ useWindowEvent("touchend", handleMouseUp)
 useWindowEvent("touchmove", handleMouseMove)
 
 function handleMouseDown() {
+  if (!props.canMove) return;
+
   mouse_down.value = true;
   emit('select');
 }
@@ -40,8 +43,8 @@ function handleMouseUp() {
   if (!mouse_down.value) return;
 
   mouse_down.value = false;
-  const gamePos = board.screenPosToGamePos(vec2(Math.floor(screen_pos.value.x + 0.5), Math.floor(screen_pos.value.y + 0.5)));
-  screen_pos.value = board.gamePosToScreenPos(props.position);
+  const gamePos = board.screenPosToGamePos(vec2(Math.floor(screenPos.value.x + 0.5), Math.floor(screenPos.value.y + 0.5)));
+  screenPos.value = board.gamePosToScreenPos(props.position);
   emit('unselect', gamePos);
 }
 
@@ -55,7 +58,7 @@ function handleMouseMove(event: MouseEvent | TouchEvent) {
   const x = (("clientX" in event ? event : event.touches[0]).clientX - rect.x) / rect.width * 8;
   const y = (("clientY" in event ? event : event.touches[0]).clientY - rect.y) / rect.height * 8;
 
-  screen_pos.value = vec2(x - 0.5, y - 0.5);
+  screenPos.value = vec2(x - 0.5, y - 0.5);
 }
 </script>
 
@@ -63,7 +66,7 @@ function handleMouseMove(event: MouseEvent | TouchEvent) {
   <div class="piece" :class="props.color, props.type, {
     selected: mouse_down,
   }" @mousedown="handleMouseDown" @touchstart="handleMouseDown" :style="{
-    translate: `${screen_pos.x * 100}% ${screen_pos.y * 100}%`,
+    translate: `${screenPos.x * 100}% ${screenPos.y * 100}%`,
   }"></div>
 </template>
 

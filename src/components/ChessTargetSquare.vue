@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { vec2 } from '@/chess/vector';
+import useChessBoardContext from '@/tools/use_chess_board_context';
 import useWindowEvent from '@/tools/use_window_event';
 import { ref } from 'vue';
 
 const props = defineProps<{
   visible: boolean,
-  getBoundingClientRect: () => DOMRect,
 }>();
+
+const board = useChessBoardContext();
 
 const screen_pos = ref(vec2(0, 0));
 const mouse_down = ref(false);
@@ -14,7 +16,7 @@ const mouse_down = ref(false);
 useWindowEvent("mousedown", event => {
   mouse_down.value = true;
 
-  const rect = props.getBoundingClientRect();
+  const rect = board.getBoundingClientRect();
   const x = (event.clientX - rect.x) / rect.width * 8;
   const y = (event.clientY - rect.y) / rect.height * 8;
 
@@ -29,7 +31,7 @@ useWindowEvent("mouseup", () => {
 useWindowEvent("mousemove", event => {
   if (!mouse_down.value || !props.visible) return;
 
-  const rect = props.getBoundingClientRect();
+  const rect = board.getBoundingClientRect();
   const x = (event.clientX - rect.x) / rect.width * 8;
   const y = (event.clientY - rect.y) / rect.height * 8;
 

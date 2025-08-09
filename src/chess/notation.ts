@@ -1,3 +1,4 @@
+import type { PieceColor } from "./piece";
 import { vec2, type Vector2 } from "./vector";
 
 export type Square = `${'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'}${'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8'}`;
@@ -24,4 +25,8 @@ export function numberToChess(position: number): Square {
 
 export function chessToNumber(position: Square): number {
   return vec2ToNumber(chessToVec2(position));
+}
+
+export function chessToColor(position: Square): PieceColor {
+  return (chessToNumber(position) % 8 + Math.trunc(chessToNumber(position) / 8)) % 2 ? 'white' : 'black';
 }

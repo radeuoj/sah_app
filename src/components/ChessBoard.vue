@@ -4,18 +4,21 @@ import { computed, inject, onMounted, onUnmounted, onUpdated, provide, ref, useT
 import useWindowEvent from '@/tools/use_window_event';
 import ChessTargetSquare from './ChessTargetSquare.vue';
 import ChessMoveSuggestion from './ChessMoveSuggestion.vue';
+import ChessSquare from './ChessSquare.vue';
 import type { BoardData } from '@/tools/use_chess_board_context';
 import type { Game } from '@/chess/game';
-import type { Piece, InternalPieceColor, InternalPieceType, PieceColor, PieceType } from '@/chess/piece';
+import type { Piece, InternalPieceColor, InternalPieceType, PieceColor, PieceType, PromotionPieceType } from '@/chess/piece';
 import { vec2, type Vector2 } from '@/chess/vector';
-import { chessToVec2, numberToChess, vec2ToChess, numberToVec2, type Square } from '@/chess/notation';
+import { chessToVec2, numberToChess, vec2ToChess, numberToVec2, type Square, chessToNumber, chessToColor } from '@/chess/notation';
 import type { Move } from '@/chess/move';
 
 const props = defineProps<{
   side: PieceColor,
   pieces: Piece[],
   enPasant: string | null,
-  promotion: "queen" | "rook" | "bishop" | "knight",
+  promotion: PromotionPieceType,
+  canMove: PieceColor | "both" | "none",
+  lastMove: Move | null,
 }>();
 
 // const pieces = ref<Piece[]>(getUpdatedPieces());
@@ -62,6 +65,11 @@ function handlePieceUnselect(piece: Piece, newPos: Square) {
 
 <template>
   <div ref="board" class="board">
+    <!-- Highlighted squares -->
+    <ChessSquare v-if="selectedPiece != null" :position="selectedPiece.position" :color="chessToColor(selectedPiece.position)" />
+    <ChessSquare v-if="lastMove != null" :position="lastMove.from" :color="chessToColor(lastMove.from)" />
+    <ChessSquare v-if="lastMove != null" :position="lastMove.to" :color="chessToColor(lastMove.to)" />
+
     <!-- Square info -->
     <div class="files">
       <div class="square" :class="i % 2 == 1 ? 'black' : 'white'" v-for="i in 8">
@@ -75,13 +83,13 @@ function handlePieceUnselect(piece: Piece, newPos: Square) {
     </div>
 
     <!-- Target square -->
-    <ChessTargetSquare :visible="selectedPiece != null" :get-bounding-client-rect="() => boardRef.getBoundingClientRect()" />
+    <ChessTargetSquare :visible="selectedPiece != null" />
 
     <!-- Pieces -->
-    <ChessPiece v-for="piece of pieces" :key="piece.id" :type="piece.type" :color="piece.color" :position="piece.position" @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
+    <ChessPiece v-for="piece of pieces" :key="piece.id" :type="piece.type" :color="piece.color" :position="piece.position" :can-move="piece.color == canMove || canMove == 'both'" @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
 
     <!-- Move suggestions -->
-    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == props.promotion)" :screen-pos="gamePosToScreenPos(move.to)" :capture="pieces.find(p => p.position == move.to) != undefined || move.to == props.enPasant" />
+    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == props.promotion)" :screen-pos="gamePosToScreenPos(move.to)" :capture="pieces.find(p => p.position == move.to) != undefined || (selectedPiece?.type == 'pawn' && move.to == props.enPasant)" />
   </div>
 </template>
 

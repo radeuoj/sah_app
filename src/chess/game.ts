@@ -1,7 +1,7 @@
 import Stack from "@/tools/stack";
-import type { InternalMove, Move } from "./move";
+import { internalMoveToMove, stringifyMove, type InternalMove, type Move } from "./move";
 import { chessToNumber, numberToChess, numberToVec2, vec2ToNumber, type Square } from "./notation";
-import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType, type PromotionPieceType } from "./piece";
+import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, internalPieceToPiece, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType, type PromotionPieceType } from "./piece";
 import { vec2, type Vector2 } from "./vector";
 
 const Directions = {
@@ -50,6 +50,8 @@ export class Game {
   };
   private enPassant: number | null;
 
+  private history: InternalMove[];
+
   private gameStack: Stack<{
     board: number[],
     moves: InternalMove[],
@@ -74,6 +76,8 @@ export class Game {
       blackQueenSide: false,
     };
     this.enPassant = null;
+
+    this.history = [];
 
     this.gameStack = new Stack();
 
@@ -152,19 +156,22 @@ export class Game {
 
   public getPieces(): Piece[] {
     return this.board
-      .map((p, i) => p == 0 ? null : ({
-        id: getPieceId(p),
-        type: getPieceType(p),
-        color: getPieceColor(p),
-        position: numberToChess(i),
-        moves: this.getMovesFromPos(i).map(m => ({
-          from: numberToChess(m.from),
-          to: numberToChess(m.to),
-          promotion: m.promotion == 0 ? null : getPieceType(m.promotion) as PromotionPieceType,
-        } satisfies Move)),
-      } satisfies Piece))
+      .map((p, i) => p == 0 ? null : 
+      internalPieceToPiece(
+        p, 
+        numberToChess(i), 
+        this.getMovesFromPos(i).map(m => internalMoveToMove(m))
+      ))
       .filter(p => p != null)
       .sort((a, b) => a.id - b.id);
+  }
+
+  public getMoves(): Move[] {
+    return this.moves.map(m => internalMoveToMove(m));
+  }
+
+  public getHistory(): Move[] {
+    return this.history.map(m => internalMoveToMove(m));
   }
 
   private getInternalPieceColorFromTurn(): number {
@@ -324,6 +331,7 @@ export class Game {
     }
 
     this.whiteTurn = !this.whiteTurn;
+    this.history.push(move);
     this.generatePseudoMoves();
 
     // check validation
@@ -349,6 +357,7 @@ export class Game {
   }
 
   private undoMove() {
+    this.history.pop();
     this.updateCurrentStateFromStack();
   }
 
@@ -368,7 +377,7 @@ export class Game {
       this.makeMove(move);
       this.validateMoves();
       result.push({
-        move: numberToChess(move.from) + numberToChess(move.to) + (Object.keys(InternalPieceType)[Object.values(InternalPieceType).indexOf(move.promotion)]?.toLowerCase()[0] ?? ''),
+        move: stringifyMove(internalMoveToMove(move)),
         nodes: this.perft(depth - 1).reduce((total, n) => total + n.nodes, 0) + +(depth == 1),
       })
       this.undoMove();

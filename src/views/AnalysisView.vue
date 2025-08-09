@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { Game } from '@/chess/game';
-import type { Move } from '@/chess/move';
-import type { InternalPieceColor, Piece, PieceColor } from '@/chess/piece';
+import { stringifyMove, type Move } from '@/chess/move';
+import type { InternalPieceColor, Piece, PieceColor, PromotionPieceType } from '@/chess/piece';
 import ChessBoard from '@/components/ChessBoard.vue';
-import { ref, shallowRef, watch } from 'vue';
+import { computed, ref, shallowRef, watch } from 'vue';
 
 const side = ref<PieceColor>("white");
 const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 const perftDepth = ref(1);
-const promotion = ref<"queen" | "rook" | "bishop" | "knight">("queen");
+const promotion = ref<PromotionPieceType>("queen");
+const canMove = ref<PieceColor | "both" | "none">("both");
 
 let game = new Game(fen.value);
 const pieces = ref<Piece[]>(game.getPieces());
+const history = ref<Move[]>(game.getHistory());
 
 watch(fen, () => {
   game = new Game(fen.value);
@@ -20,14 +22,21 @@ watch(fen, () => {
 
 // const check = computed(() => game.isBoardInCheck())
 
+const lastMove = computed(() => {
+  if (history.value.length == 0) return null;
+  return history.value[history.value.length - 1];
+});
+
 function handleMove(move: Move) {
   game.requestMove(move);
   pieces.value = game.getPieces();
+  history.value = game.getHistory();
 }
 
 function handleUnmove() {
   game.requestUnmove();
   pieces.value = game.getPieces();
+  history.value = game.getHistory();
 }
 
 function handlePerft() {
@@ -46,7 +55,7 @@ function handlePerft() {
       
     </div>
     <div class="center">
-      <ChessBoard :side :pieces :en-pasant="game.getEnPassant()" :promotion @move="handleMove" />
+      <ChessBoard :side :pieces :en-pasant="game.getEnPassant()" :promotion :can-move :last-move @move="handleMove" />
     </div>
     <div class="right">
       <div>
@@ -75,6 +84,19 @@ function handlePerft() {
       <!--<div>check: {{ check ?? 'null' }}</div> -->
       <div><button @click="handleUnmove">unmove</button></div>
       <div><input v-model="perftDepth"></input><button @click="handlePerft">perft</button></div>
+      <div>
+        <label for="can-move">can move</label>
+        <select id="can-move" v-model="canMove">
+          <option value="white">white</option>
+          <option value="black">black</option>
+          <option value="both">both</option>
+          <option value="none">none</option>
+        </select>
+      </div>
+      <div class="history">
+        History:
+        <div v-for="move in history">{{ stringifyMove(move) }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -109,5 +131,11 @@ function handlePerft() {
   .right {
     min-width: auto;
   }
+}
+
+.history {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1rem;
 }
 </style>

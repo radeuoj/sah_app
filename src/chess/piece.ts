@@ -68,3 +68,13 @@ export function isSlidingPiece(piece: number): boolean {
       return false;
   }
 }
+
+export function internalPieceToPiece(piece: number, position: Square, moves: Move[]): Piece {
+  return {
+    id: getPieceId(piece),
+    type: getPieceType(piece),
+    color: getPieceColor(piece),
+    position,
+    moves,
+  }
+}
