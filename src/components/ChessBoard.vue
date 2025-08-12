@@ -12,6 +12,9 @@ import { vec2, type Vector2 } from '@/chess/vector';
 import { chessToVec2, numberToChess, vec2ToChess, numberToVec2, type Square, chessToNumber, chessToColor } from '@/chess/notation';
 import type { Move } from '@/chess/move';
 
+const moveAudio = new Audio("/assets/sounds/move.mp3");
+const captureAudio = new Audio("/assets/sounds/capture.mp3");
+
 const props = defineProps<{
   side: PieceColor,
   pieces: Piece[],
@@ -35,6 +38,11 @@ provide<BoardData>("board", {
 const emit = defineEmits<{
   move: [move: Move],
 }>();
+
+watch(() => props.pieces, (newPieces, oldPieces) => {
+  if (newPieces.length == oldPieces.length) (moveAudio.cloneNode(true) as HTMLAudioElement).play();
+  else (captureAudio.cloneNode(true) as HTMLAudioElement).play();
+});
 
 function screenPosToGamePos(pos: Vector2): Square {
   if (props.side == "white") return vec2ToChess(vec2(pos.x, 7 - pos.y));
@@ -60,6 +68,12 @@ function handlePieceUnselect(piece: Piece, newPos: Square) {
   emit("move", move);
 
   console.log(`${piece.position}${newPos} took ${Date.now() - start}ms`);
+}
+
+function isMoveACapture(move: Move): boolean {
+  const piece = props.pieces.find(p => p.position == move.from);
+  const capture = props.pieces.find(p => p.position == move.to);
+  return capture != undefined || (piece?.type == 'pawn' && move.to == props.enPasant)
 }
 </script>
 
@@ -89,7 +103,7 @@ function handlePieceUnselect(piece: Piece, newPos: Square) {
     <ChessPiece v-for="piece of pieces" :key="piece.id" :type="piece.type" :color="piece.color" :position="piece.position" :can-move="piece.color == canMove || canMove == 'both'" @select="selectedPiece = piece" @unselect="(newPos) => handlePieceUnselect(piece, newPos)" />
 
     <!-- Move suggestions -->
-    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == props.promotion)" :screen-pos="gamePosToScreenPos(move.to)" :capture="pieces.find(p => p.position == move.to) != undefined || (selectedPiece?.type == 'pawn' && move.to == props.enPasant)" />
+    <ChessMoveSuggestion v-for="move of selectedPiece?.moves.filter(m => m.promotion == null || m.promotion == props.promotion)" :screen-pos="gamePosToScreenPos(move.to)" :capture="isMoveACapture(move)" />
   </div>
 </template>
 

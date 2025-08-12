@@ -665,4 +665,8 @@ export class Game {
     const normalMove = this.moveFromSan(move);
     this.requestMove(normalMove);
   }
+
+  public isMoveACapture(move: Move): boolean {
+    return this.board[chessToNumber(move.to)] != 0 || (this.enPassant == chessToNumber(move.to) && getInternalPieceType(this.board[chessToNumber(move.from)]) == InternalPieceType.PAWN);
+  }
 }

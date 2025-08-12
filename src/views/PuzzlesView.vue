@@ -8,12 +8,17 @@ import { useRoute } from 'vue-router';
 import { getBot } from '@/chess/bots/bot';
 import Queue from '@/tools/queue';
 
-const game = new Game();
+let game = new Game();
 
 const side = ref<PieceColor>("white");
 const pieces = ref(game.getPieces());
 const history = ref<Move[]>(game.getHistory());
 const promotion = ref<PromotionPieceType>("queen");
+
+const totalPuzzles = ref(0);
+const correctPuzzles = ref(0);
+let isPuzzleCorrect = true;
+const streak = ref(0);
 
 const lastMove = computed(() => {
   if (history.value.length == 0) return null;
@@ -21,13 +26,14 @@ const lastMove = computed(() => {
 });
 
 let future = new Queue<Move>();
+const puzzleRating = ref(0);
 
 onMounted(() => {
-  loadPuzzle()
+  loadNewPuzzle();
 });
 
 async function loadPuzzle() {
-  const res = await fetch("https://lichess.org/api/puzzle/next?angle=promotion");
+  const res = await fetch("https://lichess.org/api/puzzle/next");
   const json = await res.json();
   console.log(json)
 
@@ -46,11 +52,22 @@ async function loadPuzzle() {
   pieces.value = game.getPieces();
   history.value = game.getHistory();
   side.value = pgn.length % 2 == 0 ? "white" : "black";
+  puzzleRating.value = json.puzzle.rating;
 
   console.log(`loading puzzle took ${Date.now() - start}ms`);
 }
 
-function isMoveGood(move: Move) {
+// LOpRu
+
+function loadNewPuzzle() {
+  game = new Game();
+  totalPuzzles.value++;
+  isPuzzleCorrect = true;
+  loadPuzzle();
+}
+
+function isMoveGood(move: Move): boolean {
+  if (future.isEmpty()) return false;
   const nextMove = future.front();
   return move.from == nextMove.from && move.to == nextMove.to && move.promotion == nextMove.promotion;
 }
@@ -64,10 +81,18 @@ function handleMove(move: Move) {
   if (isMoveGood(move)) {
     requestNextFutureMove();
     requestNextFutureMove();
+
+    pieces.value = game.getPieces();
+    history.value = game.getHistory();
+
+    if (isPuzzleCorrect && future.isEmpty()) {
+      correctPuzzles.value++;
+      streak.value++;
+    }
+  } else {
+    isPuzzleCorrect = false;
+    streak.value = 0;
   }
-  
-  pieces.value = game.getPieces();
-  history.value = game.getHistory();
 }
 </script>
 
@@ -89,6 +114,10 @@ function handleMove(move: Move) {
           <option value="knight">knight</option>
         </select>
       </div>
+      <div><button @click="loadNewPuzzle">Next puzzle</button></div>
+      <div>solved: {{ correctPuzzles }}/{{ totalPuzzles }}</div>
+      <div>streak: {{ streak }}&#x1F525;</div>
+      <div>puzzle rating: {{ puzzleRating }}</div>
     </div>
   </div>
 </template>
