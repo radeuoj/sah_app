@@ -10,6 +10,8 @@ const fen = ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 const perftDepth = ref(1);
 const promotion = ref<PromotionPieceType>("queen");
 const canMove = ref<PieceColor | "both" | "none">("both");
+const lastMoveSan = ref("");
+const sanMove = ref("");
 
 let game = new Game(fen.value);
 const pieces = ref<Piece[]>(game.getPieces());
@@ -28,9 +30,20 @@ const lastMove = computed(() => {
 });
 
 function handleMove(move: Move) {
+  lastMoveSan.value = game.sanFromMove(move);
   game.requestMove(move);
   pieces.value = game.getPieces();
   history.value = game.getHistory();
+}
+
+function handleSanMove() {
+  const start = Date.now();
+  const move = game.moveFromSan(sanMove.value);
+  lastMoveSan.value = game.sanFromMove(move);
+  game.requestMove(move);
+  pieces.value = game.getPieces();
+  history.value = game.getHistory();
+  console.log(`${Date.now() - start}ms`)
 }
 
 function handleUnmove() {
@@ -93,6 +106,12 @@ function handlePerft() {
           <option value="none">none</option>
         </select>
       </div>
+      <div>
+        <label for="sanMove">move from san</label>
+        <input id="sanMove" v-model="sanMove"></input>
+        <button @click="handleSanMove">send</button>
+      </div>
+      <div>Last move as SAN: {{ lastMoveSan }}</div>
       <div class="history">
         History:
         <div v-for="move in history">{{ stringifyMove(move) }}</div>

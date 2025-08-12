@@ -1,5 +1,5 @@
 import Stack from "@/tools/stack";
-import { internalMoveToMove, stringifyMove, type InternalMove, type Move } from "./move";
+import { internalMoveToMove, pieceToSymbol, stringifyMove, type InternalMove, type Move } from "./move";
 import { chessToNumber, numberToChess, numberToVec2, vec2ToNumber, type Square } from "./notation";
 import { getInternalPieceColor, getInternalPieceType, getPieceColor, getPieceId, getPieceType, InternalPieceColor, internalPieceToPiece, InternalPieceType, isSlidingPiece, type Piece, type PieceColor, type PieceType, type PromotionPieceType } from "./piece";
 import { vec2, type Vector2 } from "./vector";
@@ -587,5 +587,82 @@ export class Game {
         }
       }
     }
+  }
+
+  private strippedSanFromMove(move: InternalMove): string {
+    const piece = this.board[move.from];
+    const type = getInternalPieceType(piece);
+    const isCapture = this.board[move.to] != 0 || this.enPassant == move.to;
+    let moves = this.moves.filter(m => m.to == move.to 
+      && getInternalPieceType(this.board[m.from]) == getInternalPieceType(piece)
+      && m.promotion == move.promotion);
+
+    // castle
+    if (type == InternalPieceType.KING && Math.abs(move.to - move.from) == 2) {
+      if (move.to - move.from == 2) return "O-O";
+      else return "O-O-O";
+    }
+
+    const pieceSymbol = type != InternalPieceType.PAWN ? pieceToSymbol(getPieceType(type)).toUpperCase() : "";
+    const destinationSquare = numberToChess(move.to);
+    let ambiguousFile = "";
+    let ambiguousRank = "";
+    const captureSymbol = isCapture ? "x" : "";
+    const promotionSymbol = move.promotion != 0 ? pieceToSymbol(getPieceType(move.promotion)).toUpperCase() : "";
+
+    const file = this.getFile(move.from);
+
+    // ambiguity or pawn capture
+    if (moves.length > 1 || (type == InternalPieceType.PAWN && (Math.abs(move.to - move.from) == 9 || Math.abs(move.to - move.from) == 7))) {
+      ambiguousFile = "abcdefgh"[file];
+      moves = moves.filter(m => this.getFile(m.from) == file);
+    }
+
+    const rank = this.getRank(move.from);
+
+    if (moves.length > 1) {
+      ambiguousFile = "";
+      ambiguousRank = (rank + 1).toString();
+      moves = moves.filter(m => this.getRank(m.from) == rank);
+    }
+
+    if (moves.length > 1) {
+      ambiguousFile = "abcdefgh"[file];
+      ambiguousRank = (rank + 1).toString();
+      moves = moves.filter(m => this.getRank(m.from) == rank && this.getFile(m.from) == file);
+    }
+
+    return pieceSymbol + ambiguousFile + ambiguousRank + captureSymbol + destinationSquare + promotionSymbol;
+  }
+
+  public sanFromMove(move: Move): string {
+    const from = chessToNumber(move.from);
+    const to = chessToNumber(move.to);
+    const promotion = move.promotion == null ? 0 :
+      Object.values(InternalPieceType)[Object.keys(InternalPieceType).map(k => k.toLowerCase()).indexOf(move.promotion)];
+    return this.strippedSanFromMove({ from, to, promotion });
+  }
+
+  private stripSan(move: string): string {
+    return move.replace(/=/, '').replace(/[+#]?[?!]*$/, '');
+  }
+
+  public moveFromSan(move: string): Move {
+    const san = this.stripSan(move);
+    const moves = this.getMoves();
+    if (san == "b1Q") console.log(moves);
+
+    for (const move of moves) {
+      if (this.sanFromMove(move) == san) {
+        return move;
+      }
+    }
+
+    throw new Error(`Invalid SAN ${move}`);
+  }
+
+  public requestMoveFronSan(move: string) {
+    const normalMove = this.moveFromSan(move);
+    this.requestMove(normalMove);
   }
 }

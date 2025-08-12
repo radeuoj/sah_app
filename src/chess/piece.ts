@@ -42,7 +42,7 @@ export function getPieceId(piece: number): number {
 export function getPieceType(piece: number): PieceType {
   const pieceType = getInternalPieceType(piece);
   const index = Object.values(InternalPieceType).indexOf(pieceType);
-  if (index == undefined)
+  if (index == -1)
     throw new Error("Unkown piece type!");
 
   return Object.keys(InternalPieceType)[index].toLowerCase() as PieceType;
