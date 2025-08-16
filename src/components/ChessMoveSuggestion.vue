@@ -40,7 +40,7 @@ const props = defineProps<{
   box-sizing: border-box;
   border-radius: 50%;
   border-style: solid;
-  border-width: 6px;
+  border-width: calc(0.01 * var(--chess-board-size));
   border-color: rgba(0, 0, 0, 0.14);
 }
 </style>
