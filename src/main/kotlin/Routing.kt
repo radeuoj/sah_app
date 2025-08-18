@@ -21,10 +21,10 @@ fun Application.configureRouting() {
             vue("web/dist")
         }
 
-        get("/") {
-            call.respondText("Hello World!")
+        route("/api") {
+            get("/hello") {
+                call.respondText("Hello World!")
+            }
         }
-        // Static plugin. Try to access `/static/index.html`
-        staticResources("/static", "static")
     }
 }
