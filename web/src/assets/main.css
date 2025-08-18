@@ -1,0 +1,14 @@
+:root {
+  --chess-board-size: min(80vh, 100vw);
+  --chess-board-margin: min(calc((100svh - var(--chess-board-size)) / 2), 10000px);
+  --chess-square-black-color: #8A2D3B;
+  --chess-square-white-color: #FBDB93;
+  --chess-square-black-highlight-color: #b6b454;
+  --chess-square-white-highlight-color: #e0df7d;
+}
+
+body {
+  margin: 0;
+
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
